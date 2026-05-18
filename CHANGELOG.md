@@ -13,6 +13,51 @@ Versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
 
+## [0.10.0] — 2026-05-18 — Visual Zebra/Reflection PNG Renderer
+
+### Added
+
+**Milestone 13 — Pure-stdlib PNG renderer** (`partikus/core/render.py`)
+- `write_png(width, height, pixels)` — encodes a flat list of `(R, G, B)` tuples to a
+  valid PNG byte string using only `zlib` and `struct`. No external dependencies,
+  no FreeCAD GUI, no display server required.
+
+**`analyze_zebra` — visual output** (`tier15d_analysis.py`)
+- New params: `resolution=None`, `output_path=None`.
+- When `resolution` is set, samples the face on a `resolution × resolution` UV grid,
+  maps reflected-ray elevation angle to alternating black/white stripe bands, and
+  encodes the result as PNG using `core.render.write_png`.
+- Returns `image_bytes` (PNG bytes) when `output_path` is None; writes to file and
+  returns `image_path` when `output_path` is given.
+- Existing numerical keys (`stripe_ids`, `continuity_hint`, etc.) are unchanged.
+
+**`analyze_reflection` — visual output** (`tier15d_analysis.py`)
+- New params: `stripe_count=8`, `resolution=None`, `output_path=None`.
+- Same PNG generation pipeline as `analyze_zebra`, but maps the Y component of the
+  reflected ray to stripe bands — simulating horizontal ceiling-strip reflections.
+- Existing numerical keys (`mean_divergence`, `continuity_hint`, etc.) are unchanged.
+
+### Key implementation notes
+
+- Both functions remain fully headless: no `FreeCADGui`, no Qt, no OpenGL.
+- Image space maps UV parameter space directly to pixels — uniform coverage of the
+  surface regardless of 3D shape or projection distortion.
+- Flat/uniform surfaces produce tiny PNGs (zlib compresses uniform data aggressively);
+  curved surfaces with stripe variation produce larger, more informative images.
+- Failed `normalAt` samples render as mid-grey `(80, 80, 80)` rather than crashing.
+
+### Tests
+
+- 7 new tests in `tests/test_tier15.py`:
+  `test_analyze_zebra_no_image_by_default`, `test_analyze_zebra_image_bytes_is_valid_png`,
+  `test_analyze_zebra_output_path_writes_file`, `test_analyze_reflection_no_image_by_default`,
+  `test_analyze_reflection_image_bytes_is_valid_png`,
+  `test_analyze_reflection_output_path_writes_file`,
+  `test_analyze_zebra_existing_keys_unchanged`.
+- **704 total tests — all passing**.
+
+---
+
 ## [0.9.0] — 2026-05-18 — Anchor Serialisation, GUI Expansion, SubD, CI
 
 ### Added

@@ -1,8 +1,8 @@
 # Partikus — Developer Handoff
 
 **Last updated:** 2026-05-18  
-**Status:** Milestones 1–12 complete — 697 tests passing  
-**Next milestone:** Visual zebra/reflection (rendering pipeline) / visual regression tests
+**Status:** Milestones 1–13 complete — 704 tests passing  
+**Next milestone:** Visual regression tests / BRep-stub workarounds / new tier
 
 This document is the single source of truth for picking up development in a new session. Read it top-to-bottom before touching any code.
 
@@ -59,9 +59,11 @@ partikus/
 │   ├── __init__.py                      # public API — import everything from here
 │   ├── core/
 │   │   ├── anchors.py                   # anchor name string constants
-│   │   ├── shape_wrapper.py             # PartikusShape class
+│   │   ├── shape_wrapper.py             # PartikusShape class (has subd_mesh slot)
 │   │   ├── transforms.py                # rotation_from_to, placement_for_rotation
-│   │   └── document.py                  # FreeCAD document helpers
+│   │   ├── document.py                  # FreeCAD document helpers
+│   │   ├── serialise.py                 # save_to_doc / load_from_doc (anchor round-trip)
+│   │   └── render.py                    # write_png — stdlib-only PNG encoder
 │   ├── presets/
 │   │   ├── __init__.py
 │   │   ├── screws.py                    # ISO metric screw dimensions M2–M20
@@ -82,9 +84,10 @@ partikus/
 │   ├── tier13_architectural.py          # wall, stairs, roofs, column, beam, truss
 │   ├── tier14_assembly.py
 │   ├── tier15a_nurbs.py                 # NURBS curves + most surfaces (real); BRep ops stubbed
-│   ├── tier15b_subd.py                  # all stubs — no FreeCAD 1.1.1 SubD support
-│   ├── tier15c_conversion.py            # mesh_to_nurbs (real); SubD conversions stubbed
-│   ├── tier15d_analysis.py              # curvature/draft/deviation (real); zebra/reflection stubbed
+│   ├── tier15b_subd.py                  # 11 SubD functions (pure-Python Catmull-Clark)
+│   ├── tier15c_conversion.py            # mesh_to_nurbs, subd_to_nurbs, mesh_to_subd, nurbs_to_subd
+│   ├── tier15d_analysis.py              # curvature/draft/deviation/zebra/reflection (all real)
+│   ├── subd_mesh.py                     # SubDMesh class — Catmull-Clark engine + 5 primitives
 │   ├── io.py                            # export (STEP/STL/IGES/BREP/OBJ/FCStd) + import (STEP/BREP/STL)
 │   ├── ai/
 │   │   ├── __init__.py                  # exports analyze_image/text, generate_script, run_script
@@ -93,10 +96,11 @@ partikus/
 │   │   ├── generator.py                 # ScriptGenerator — analysis dict → runnable Python
 │   │   └── pipeline.py                  # high-level: analyze_image, analyze_text, generate_script, run_script
 │   └── gui/
-│       ├── auto_dialog.py
-│       └── workbench.py
+│       ├── auto_dialog.py               # uses save_to_doc for anchor-preserving GUI shapes
+│       └── workbench.py                 # Tiers 1–8 commands (84 functions, 8 toolbars)
 ├── tests/
 │   ├── run_tests.py                     # headless runner — start here
+│   ├── run_integration_tests.py         # AI pipeline tests (requires ANTHROPIC_API_KEY)
 │   ├── test_core.py
 │   ├── test_tier01.py  test_tier02.py  test_tier03.py
 │   ├── test_tier04.py  test_tier05.py  test_tier06.py
@@ -104,12 +108,14 @@ partikus/
 │   ├── test_tier09.py  test_tier10.py  test_tier11.py  test_tier12.py
 │   ├── test_tier13.py  test_tier14.py  test_tier15.py
 │   ├── test_io.py
-│   └── test_ai.py
+│   ├── test_ai.py
+│   ├── test_serialise.py                # anchor save/load round-trip tests
+│   └── test_subd.py                     # Catmull-Clark + SubD op tests
 └── examples/
     └── capped_cylinder.py
 ```
 
-Tier 15B (SubD) and 4 Tier 15A BRep-editing functions are **stubbed** — raise `NotImplementedError`. Blocked on missing FreeCAD 1.1.1 API surface.
+4 Tier 15A BRep-editing functions are **stubbed** — raise `NotImplementedError`. Blocked on missing FreeCAD 1.1.1 API surface. Everything else is implemented.
 
 ---
 
@@ -230,6 +236,16 @@ Anchor names are string constants in `core/anchors.py`. Every shape guarantees a
   - FreeCAD sphere tessellation has a minimum ~8000 facets regardless of deflection until < 0.05 mm
 - 37 new tests → **589 total, all passing**
 
+### Milestones 9–13 (2026-05-18)
+
+See `CHANGELOG.md [0.9.0]` and `[0.10.0]` for full details.
+
+- **M9 — Anchor serialisation**: `core/serialise.py` — `save_to_doc`/`load_from_doc` persist anchors across `.FCStd` save/load. 11 tests.
+- **M10 — GUI expansion**: `gui/workbench.py` extended to Tiers 1–8 (84 functions, 8 toolbars, full menu tree).
+- **M11 — CI integration runner**: `tests/run_integration_tests.py` — standalone AI pipeline test suite (requires `ANTHROPIC_API_KEY`).
+- **M12 — SubD** (pure-Python Catmull-Clark): `subd_mesh.py` + all 11 `tier15b_subd.py` functions real. `tier15c_conversion.py` conversions real. `analyze_zebra`/`analyze_reflection` numerical. 61 tests.
+- **M13 — Visual renderer**: `core/render.py` stdlib PNG writer. `analyze_zebra` and `analyze_reflection` now produce real PNG images via UV-grid sampling + stripe mapping. No GUI, no display required. 7 tests.
+
 ### Milestone 8 (2026-05-18)
 
 - `partikus/ai/` — new subpackage for AI-driven shape decomposition (no external deps — stdlib only)
@@ -264,14 +280,14 @@ Remaining stubs in Tier 15A (BRep editing — blocked on FreeCAD Python API):
 | `match_surfaces` | `tier15a_nurbs.py` | BRep shape healing not in FreeCAD Python API |
 | `variable_fillet` | `tier15a_nurbs.py` | Variable-radius fillet not in FreeCAD Python API |
 | `surface_chamfer` | `tier15a_nurbs.py` | Surface chamfer not in FreeCAD Python API |
-| `analyze_zebra` (visual) | `tier15d_analysis.py` | Rendering pipeline needed for actual stripe image |
-| `analyze_reflection` (visual) | `tier15d_analysis.py` | Rendering pipeline needed |
 
-Milestones 9–12 done. Candidate next steps:
+These four are genuinely blocked — no workaround exists in FreeCAD 1.x Python. Leave as `NotImplementedError` until FreeCAD exposes the underlying OCC APIs.
 
-1. **Visual zebra/reflection** — integrate a headless renderer (e.g., FreeCAD's `FreeCADGui.offscreen_render`) for actual stripe images
-2. **Visual regression tests** — render reference shapes; detect drift
-3. **Anchor serialisation round-trip tests** — already done; extend to test `from_step` + `save_to_doc` pipeline
+Candidate next steps (no hard blockers):
+
+1. **Visual regression tests** — render reference shapes with `analyze_zebra`; store baseline PNGs; detect drift on re-render
+2. **Expand AI system prompt** — `analyze_zebra` / `analyze_reflection` / `subd_*` functions not yet in the AI prompt; add them
+3. **New tier** — Tier 16 or domain-specific (e.g., jewellery, robotics, sheet metal)
 
 ### Adding a new tier — checklist
 
@@ -296,7 +312,7 @@ These were open in §11 — now decided:
 
 3. **SubD (Tier 15B):** Deferred — no native FreeCAD 1.1.1 support. Stub with `NotImplementedError`.
 
-4. **Anchor serialisation:** Still deferred. Not needed for scripting workflows.
+4. **Anchor serialisation:** Done in M9 — `core/serialise.py`.
 
 ## 8. Known Limitations & Gotchas
 
@@ -417,7 +433,7 @@ Never shorten (`dia`, `wid`, `h`, `len`, etc.). The AI downstream needs to guess
 
 ## 12. Design Questions Remaining
 
-1. **SubD (Tier 15B):** FreeCAD 1.1.1 has no native SubD support. Options: (a) integrate OpenSubDiv via ctypes, (b) delegate to Blender + OBJ exchange, (c) stub with `NotImplementedError` and revisit. Decision needed before Milestone 5.
+1. **SubD (Tier 15B):** Resolved — pure-Python Catmull-Clark in `subd_mesh.py`. All 11 functions real.
 
 2. **Anchor serialisation:** Anchors are currently only in-memory. For saving/loading `PartikusShape` from `.FCStd`, anchors must be serialised (e.g., as a `FreeCAD.PropertyPythonObject` on the feature). Not needed for scripting workflows; needed for GUI round-trips.
 
@@ -442,11 +458,11 @@ Expected output:
 
 ```
 ============================================================
-  697 passed  |  0 failed
+  704 passed  |  0 failed
 ```
 
 If anything is failing, fix it before adding new code.
 
 ---
 
-*End of handoff. Milestones 1–8 complete. 625 tests passing. Next: GUI expansion, SubD, or anchor serialisation.*
+*End of handoff. Milestones 1–13 complete. 704 tests passing. Next: visual regression tests, AI prompt expansion, or new tier.*

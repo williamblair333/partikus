@@ -18,7 +18,8 @@ from partikus.tier15c_conversion import (
     subd_to_nurbs, nurbs_to_subd, mesh_to_subd, mesh_to_nurbs,
 )
 from partikus.tier15d_analysis import (
-    analyze_curvature, analyze_zebra, analyze_draft, analyze_deviation,
+    analyze_curvature, analyze_zebra, analyze_reflection,
+    analyze_draft, analyze_deviation,
 )
 from partikus.tier01_primitives import box, cylinder
 
@@ -721,3 +722,62 @@ def test_analyze_zebra_invalid_input_raises():
         assert False, "Expected TypeError"
     except TypeError:
         pass
+
+def test_analyze_zebra_no_image_by_default():
+    s = surface_from_points(_make_grid(z_amp=0))
+    info = analyze_zebra(s, stripe_count=4, sample_grid=4)
+    assert info["image_bytes"] is None
+    assert info["image_path"] is None
+
+def test_analyze_zebra_image_bytes_is_valid_png():
+    s = surface_from_points(_make_grid(z_amp=5.0))
+    info = analyze_zebra(s, stripe_count=4, sample_grid=4, resolution=32)
+    assert info["image_bytes"] is not None
+    assert info["image_bytes"][:8] == b'\x89PNG\r\n\x1a\n'
+    assert len(info["image_bytes"]) > 70  # curved surface gives varied pixels
+
+def test_analyze_zebra_output_path_writes_file():
+    import os
+    s = surface_from_points(_make_grid(z_amp=0))
+    path = "/tmp/partikus_test_zebra.png"
+    info = analyze_zebra(s, stripe_count=4, sample_grid=4, resolution=32,
+                         output_path=path)
+    assert os.path.exists(path)
+    with open(path, "rb") as f:
+        assert f.read(8) == b'\x89PNG\r\n\x1a\n'
+    os.unlink(path)
+    assert info["image_bytes"] is None
+    assert info["image_path"] == path
+
+def test_analyze_reflection_no_image_by_default():
+    s = surface_from_points(_make_grid(z_amp=0))
+    info = analyze_reflection(s, sample_grid=4)
+    assert info["image_bytes"] is None
+    assert info["image_path"] is None
+
+def test_analyze_reflection_image_bytes_is_valid_png():
+    s = surface_from_points(_make_grid(z_amp=5.0))
+    info = analyze_reflection(s, sample_grid=4, stripe_count=4, resolution=32)
+    assert info["image_bytes"] is not None
+    assert info["image_bytes"][:8] == b'\x89PNG\r\n\x1a\n'
+    assert len(info["image_bytes"]) > 70
+
+def test_analyze_reflection_output_path_writes_file():
+    import os
+    s = surface_from_points(_make_grid(z_amp=0))
+    path = "/tmp/partikus_test_reflection.png"
+    info = analyze_reflection(s, sample_grid=4, stripe_count=4, resolution=32,
+                              output_path=path)
+    assert os.path.exists(path)
+    with open(path, "rb") as f:
+        assert f.read(8) == b'\x89PNG\r\n\x1a\n'
+    os.unlink(path)
+    assert info["image_bytes"] is None
+    assert info["image_path"] == path
+
+def test_analyze_zebra_existing_keys_unchanged():
+    s = surface_from_points(_make_grid(z_amp=0))
+    info = analyze_zebra(s, stripe_count=6, sample_grid=4, resolution=16)
+    for k in ("stripe_ids", "stripe_count", "continuity_hint", "sample_count"):
+        assert k in info
+    assert info["stripe_count"] == 6

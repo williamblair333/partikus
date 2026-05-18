@@ -1,21 +1,70 @@
 """
 Tier 15D — Continuity & Quality Analysis.
 
-analyze_curvature, analyze_draft, and analyze_deviation are implemented.
-analyze_zebra and analyze_reflection are stubbed (require rendering pipeline).
+analyze_curvature, analyze_draft, and analyze_deviation: fully implemented.
+analyze_zebra and analyze_reflection: numerical analysis + optional PNG output.
+  PNG is generated via pure-stdlib renderer (no FreeCAD GUI, no display needed).
 """
 
 import math
+import os
 import FreeCAD
 import Part
 
 from .core.shape_wrapper import PartikusShape
+from .core.render import write_png
 
 
 def _unwrap_shape(s):
     if isinstance(s, PartikusShape):
         return s.shape
     return s
+
+
+def _render_uv_stripes(face, stripe_count, cam_vec, resolution, mode):
+    """
+    Sample face normals on a resolution×resolution UV grid and produce a PNG.
+
+    cam_vec: normalised FreeCAD.Vector (incident view direction).
+    mode:    "zebra"      — stripe by elevation angle of reflected ray
+             "reflection" — stripe by Y component of reflected ray
+    Returns PNG bytes.
+    """
+    u0, u1, v0, v1 = face.ParameterRange
+    n = max(2, resolution)
+    pixels = []
+
+    for j in range(n):
+        v_frac = j / (n - 1) if n > 1 else 0.5
+        v = v0 + (v1 - v0) * v_frac
+        for i in range(n):
+            u_frac = i / (n - 1) if n > 1 else 0.5
+            u = u0 + (u1 - u0) * u_frac
+            try:
+                nrm = face.normalAt(u, v)
+                dn = cam_vec.x*nrm.x + cam_vec.y*nrm.y + cam_vec.z*nrm.z
+                rx = cam_vec.x - 2*dn*nrm.x
+                ry = cam_vec.y - 2*dn*nrm.y
+                rz = cam_vec.z - 2*dn*nrm.z
+                if mode == "zebra":
+                    angle = math.atan2(math.sqrt(rx*rx + ry*ry), rz)
+                    sid = int(angle / math.pi * stripe_count) % stripe_count
+                else:
+                    sid = int((ry + 1.0) / 2.0 * stripe_count) % stripe_count
+                col = (0, 0, 0) if sid % 2 == 0 else (255, 255, 255)
+            except Exception:
+                col = (80, 80, 80)
+            pixels.append(col)
+
+    return write_png(n, n, pixels)
+
+
+def _save_png(image_bytes, output_path):
+    parent = os.path.dirname(os.path.abspath(output_path))
+    if parent:
+        os.makedirs(parent, exist_ok=True)
+    with open(output_path, 'wb') as f:
+        f.write(image_bytes)
 
 
 def analyze_curvature(surface, mode="gaussian"):
@@ -73,33 +122,38 @@ def analyze_curvature(surface, mode="gaussian"):
     }
 
 
-def analyze_zebra(surface, stripe_count=8, camera_direction=(0, 0, 1), sample_grid=8):
+def analyze_zebra(surface, stripe_count=8, camera_direction=(0, 0, 1),
+                  sample_grid=8, resolution=None, output_path=None):
     """
-    Numerical zebra-stripe reflection analysis.
+    Zebra-stripe reflection analysis — numerical + optional PNG image.
 
-    Samples the surface on a grid, reflects a virtual stripe environment off
+    Samples the surface on a UV grid, reflects a virtual stripe environment off
     each normal, and returns per-sample stripe IDs. Stripe-ID discontinuities
     between adjacent samples indicate C0 or G1 breaks.
 
     Args:
         surface:          PartikusShape wrapping a Part.Face (BSplineSurface)
-        stripe_count:     number of alternating black/white stripes in the virtual
-                          environment (higher = finer resolution)
-        camera_direction: (x, y, z) unit vector representing the view direction
-        sample_grid:      samples per axis (total = sample_grid²)
+        stripe_count:     alternating black/white stripe count in virtual environment
+        camera_direction: (x, y, z) view direction unit vector
+        sample_grid:      samples per axis for numerical analysis (sample_grid²)
+        resolution:       pixel size of output image (resolution × resolution).
+                          None = no image (default).
+        output_path:      if given, write PNG to this path; image_bytes is then None.
 
     Returns:
         dict with keys:
           stripe_ids      — list of (u_frac, v_frac, stripe_id, normal) per sample
           stripe_count    — stripe count used
-          continuity_hint — "likely_G1" if no stripe ID jumps > 1 between neighbours,
-                            "possible_G0" otherwise
+          continuity_hint — "likely_G1" / "possible_G0"
           sample_count    — total samples
+          image_bytes     — PNG bytes, or None if output_path was given or
+                            resolution was None
+          image_path      — output_path if written, else None
 
     Example:
         surf = surface_from_points(my_grid)
-        z    = analyze_zebra(surf, stripe_count=10)
-        print(z["continuity_hint"])
+        z    = analyze_zebra(surf, stripe_count=10, resolution=256,
+                             output_path="/tmp/zebra.png")
     """
     face = _unwrap_shape(surface)
     if not hasattr(face, "Surface"):
@@ -156,41 +210,57 @@ def analyze_zebra(surface, stripe_count=8, camera_direction=(0, 0, 1), sample_gr
                     if jump > 1:
                         continuity = "possible_G0"
 
+    image_bytes = None
+    image_path = None
+    if resolution is not None and resolution > 0:
+        image_bytes = _render_uv_stripes(face, stripe_count, cam, resolution, "zebra")
+        if output_path is not None:
+            _save_png(image_bytes, output_path)
+            image_path = output_path
+            image_bytes = None
+
     return {
         "stripe_ids":      samples,
         "stripe_count":    stripe_count,
         "continuity_hint": continuity,
         "sample_count":    len(samples),
+        "image_bytes":     image_bytes,
+        "image_path":      image_path,
     }
 
 
 def analyze_reflection(surface, environment_map=None, camera_direction=(0, 0, 1),
-                       sample_grid=8):
+                       sample_grid=8, stripe_count=8, resolution=None,
+                       output_path=None):
     """
-    Numerical reflection analysis — samples the surface and returns the
-    reflected camera direction at each point.
+    Reflection analysis — mean reflected-vector divergence + optional PNG image.
 
-    Useful for detecting surface tangency issues without a rendering pipeline:
-    smooth reflection vectors indicate a G1 surface; discontinuous vectors
-    indicate a G0 (positional-only) join.
+    Samples the surface and computes the reflected camera direction at each
+    point. Smooth reflections indicate G1; abrupt changes indicate G0.
 
     Args:
         surface:          PartikusShape wrapping a Part.Face
         environment_map:  reserved for future rendering pipeline support
         camera_direction: (x, y, z) incident view direction
-        sample_grid:      samples per axis
+        sample_grid:      samples per axis for numerical analysis
+        stripe_count:     stripe count for image generation
+        resolution:       pixel size of output image (resolution × resolution).
+                          None = no image (default).
+        output_path:      if given, write PNG to this path; image_bytes is then None.
 
     Returns:
         dict with keys:
-          samples         — list of (u_frac, v_frac, (rx, ry, rz), (nx, ny, nz))
+          samples         — list of (u_frac, v_frac, (rx,ry,rz), (nx,ny,nz))
           mean_divergence — mean angular deviation between adjacent reflected vectors (rad)
-          continuity_hint — "likely_G1" if mean_divergence < 0.1 rad, else "possible_G0"
+          continuity_hint — "likely_G1" / "possible_G0"
           sample_count
+          image_bytes     — PNG bytes, or None
+          image_path      — output_path if written, else None
 
     Example:
         surf = surface_from_points(my_grid)
-        r    = analyze_reflection(surf)
-        print(r["continuity_hint"])
+        r    = analyze_reflection(surf, stripe_count=12, resolution=256)
+        open("/tmp/refl.png", "wb").write(r["image_bytes"])
     """
     face = _unwrap_shape(surface)
     if not hasattr(face, "Surface"):
@@ -243,11 +313,23 @@ def analyze_reflection(surface, environment_map=None, camera_direction=(0, 0, 1)
     mean_div    = sum(divergences) / len(divergences) if divergences else 0.0
     continuity  = "likely_G1" if mean_div < 0.1 else "possible_G0"
 
+    image_bytes = None
+    image_path = None
+    if resolution is not None and resolution > 0:
+        image_bytes = _render_uv_stripes(face, stripe_count, cam, resolution,
+                                         "reflection")
+        if output_path is not None:
+            _save_png(image_bytes, output_path)
+            image_path = output_path
+            image_bytes = None
+
     return {
         "samples":          samples,
         "mean_divergence":  mean_div,
         "continuity_hint":  continuity,
         "sample_count":     len(samples),
+        "image_bytes":      image_bytes,
+        "image_path":       image_path,
     }
 
 
