@@ -2,11 +2,11 @@
 
 > **A parametric CAD toolkit for FreeCAD. Every part has its place.**
 
-[![Tests](https://img.shields.io/badge/tests-193%20passing-brightgreen)](#testing)
+[![Tests](https://img.shields.io/badge/tests-552%20passing-brightgreen)](#testing)
 [![Python](https://img.shields.io/badge/python-3.11-blue)](https://www.python.org/)
 [![FreeCAD](https://img.shields.io/badge/FreeCAD-1.1.1-orange)](https://www.freecad.org/)
 [![License](https://img.shields.io/badge/license-LGPL--2.1-lightgrey)](LICENSE)
-[![Milestone](https://img.shields.io/badge/milestone-2%20of%206-yellow)](#roadmap)
+[![Milestone](https://img.shields.io/badge/milestone-6%20of%206-yellow)](#roadmap)
 
 ---
 
@@ -33,11 +33,15 @@ The architecture is built for three audiences at once:
   - [Tier 1 — Raw Primitives](#tier-1--raw-3d-primitives)
   - [Tier 2 — Enhanced Primitives](#tier-2--enhanced-primitives)
   - [Tier 3 — 2D Profiles](#tier-3--2d-profiles)
+  - [Tier 7 — Container / Enclosure Features](#tier-7--container--enclosure-features)
+  - [Tier 8 — Electronics Mounting](#tier-8--electronics-mounting)
   - [Tier 9 — Boolean Operations](#tier-9--boolean-operations)
   - [Tier 10 — Edge & Surface Modifiers](#tier-10--edge--surface-modifiers)
   - [Tier 11 — Pattern / Array Operations](#tier-11--pattern--array-operations)
   - [Tier 12 — Sweep / Loft](#tier-12--sweep--loft)
+  - [Tier 13 — Architectural](#tier-13--architectural)
   - [Tier 14 — Assembly & Positioning](#tier-14--assembly--positioning)
+  - [Tier 15A — NURBS Curves](#tier-15a--nurbs-curves)
 - [Anchor System](#anchor-system)
 - [Parameter Conventions](#parameter-conventions)
 - [Testing](#testing)
@@ -264,6 +268,76 @@ polyline(points, closed=False)            # 2D (x,y) or 3D (x,y,z) tuples
 
 ---
 
+### Tier 7 — Container / Enclosure Features
+
+```python
+lid(length=60, width=40, rim_height=5, rim_inset=1, wall_thickness=2)
+  # flat lid with downward seating rim
+
+snap_fit_box(length, width, height, wall_thickness=2, snap_count=4)
+  # open-top box with snap-tab clips on outer walls
+
+hinged_box(length, width, height, wall_thickness=2, hinge_side="BACK")
+  # two-piece box joined by a living-hinge strip; hinge_side: FRONT|BACK|LEFT|RIGHT
+
+magnetic_recess(magnet_diameter, magnet_thickness, count=1, spacing=10)
+  # cylindrical press-fit pockets for disc magnets
+
+battery_compartment(battery_type="AA", count=1, wall_thickness=1.5, contact_clearance=2)
+  # tray for AA | AAA | C | D | 9V | 18650 | CR2032 | CR2025 | CR2016
+
+cable_channel(width, depth, length, wall_thickness=1.5)
+  # U-shaped cable routing channel
+
+strain_relief(cable_diameter, length, wall_thickness=2, clamp_gap=1)
+  # split-collar cable clamp
+
+vent_slots(length, width, slot_count=5, slot_width=2, depth=2, wall_thickness=1)
+  # panel with evenly-spaced rectangular ventilation slots
+
+display_window(length, width, recess_depth=0, border_thickness=3, panel_thickness=2)
+  # panel with rectangular viewing aperture; optional stepped recess
+
+button_cutout(diameter, panel_thickness=2, shape="round")
+  # panel through-hole for a button; shape: "round" | "square"
+```
+
+---
+
+### Tier 8 — Electronics Mounting
+
+```python
+pcb_standoff(height=8, hole_diameter=3.2, base_diameter=6)
+  # hollow cylindrical standoff for M2.5/M3 PCB screws
+
+raspberry_pi_mount(model="4B", standoff_height=8, hole_diameter=2.9)
+  # mounting plate + standoffs for: 3B | 3B+ | 4B | 5 | Zero | Zero2
+
+arduino_mount(model="uno", standoff_height=8, hole_diameter=3.2)
+  # mounting plate + standoffs for: uno | mega | nano | leonardo | micro
+
+led_holder(led_diameter=5, panel_thickness=2, retention_lip=0.5)
+  # press-fit panel mount for 3 mm / 5 mm / 10 mm LEDs
+
+usb_cutout(connector_type="USB-C", panel_thickness=2, clearance=0.3)
+  # connector_type: USB-A | USB-B | USB-C | Micro-USB | Mini-USB
+
+hdmi_cutout(connector_type="full", panel_thickness=2, clearance=0.3)
+  # connector_type: full | mini | micro
+
+barrel_jack_cutout(outer_diameter=8, panel_thickness=2, clearance=0.2)
+  # common sizes: 5.5 mm, 6.3 mm, 8.0 mm
+
+din_rail_clip(rail_type="35mm", clip_length=40, wall_thickness=2.5)
+  # snap-on clip for EN 60715 TS 35 or TS 15 DIN rails
+
+heatsink_fin_array(base_length, base_width, fin_count=8,
+                   fin_height=15, fin_thickness=1.5, base_thickness=3)
+  # rectangular extruded-fin heatsink on flat base plate
+```
+
+---
+
 ### Tier 9 — Boolean Operations
 
 ```python
@@ -333,6 +407,114 @@ loft(profile_list, closed=False, ruled=False)
 pipe(path_curve, diameter, wall_thickness=0)
   # convenience: sweeps a circle (or tube) along path
   # wall_thickness > diameter/2 → ValueError
+```
+
+---
+
+### Tier 13 — Architectural
+
+All dimensions in **mm**.
+
+```python
+wall(length=3000, height=2400, thickness=200, openings=[])
+  # openings: list of {"x_offset", "z_offset", "width", "height"} dicts
+
+door(width=900, height=2100, thickness=40)
+window(width=1200, height=1200, frame_thickness=50, depth=80)
+
+stairs(total_rise=2400, total_run=3600, tread_count=12, width=900)
+
+roof_gable(length=6000, width=4000, peak_height=1500, overhang=300)
+roof_hip(length=6000, width=4000, peak_height=1500, overhang=300)
+roof_shed(length=4000, width=3000, low_height=2000, high_height=2800)
+
+column(diameter=300, height=3000, base_size=None, capital_size=None)
+  # base_size / capital_size: square plinth/capital side length (mm)
+
+beam(length=3000, cross_section_profile=None, width=100, height=200)
+  # cross_section_profile: Part.Wire in YZ plane; None → rectangular section
+
+slab(length=6000, width=4000, thickness=200)
+
+truss_simple(length=6000, height=800, panel_count=6,
+             member_width=50, member_height=100)
+  # planar Pratt truss — top/bottom chords, verticals, alternating diagonals
+```
+
+---
+
+### Tier 15A — NURBS Curves & Surfaces
+
+Curves and surface operations are implemented. `untrim_surface`, `match_surfaces`, `variable_fillet`, and `surface_chamfer` are stubbed (require BRep editing APIs not exposed in FreeCAD 1.x).
+
+**Curves**
+
+```python
+nurbs_curve(control_points, weights=None, degree=3, knots=None)
+bspline_curve(control_points, degree=3)
+bezier_curve(control_points)
+curve_through_points(points, smooth=True)
+helix_curve(diameter=20, pitch=5, turns=5, taper=0)
+conic_curve(conic_type="parabola", focal_length=50, extent=100)
+  # conic_type: "parabola" | "hyperbola"
+```
+
+**Surfaces** — return PartikusShape wrapping a Part.Face or Part.Shell
+
+```python
+loft_surface(profile_curves, ruled=False)
+  # profile_curves: list of PartikusShape (Wire) or Part.Wire — at least 2
+
+sweep_1rail(profile, rail)
+  # profile: cross-section wire; rail: path wire
+
+patch_fill(boundary_curves)
+  # list of wires forming a closed boundary; planar → exact; curved → approximate
+
+boundary_surface(curves)
+  # alias of patch_fill for 3 or 4 boundary curves
+
+surface_from_points(point_grid_2d)
+  # 2-D list of (x,y,z) tuples → interpolated BSplineSurface
+```
+
+**Surface editing**
+
+```python
+move_control_point(surface, u_index, v_index, new_position)
+  # u_index, v_index: 1-based; new_position: (x, y, z)
+
+offset_surface(surface, distance)
+  # positive = outward inflation; negative = inward
+
+join_surfaces(*surfaces)
+  # join 2+ Part.Face/PartikusShape into a shell
+
+rebuild_surface(surface, u_count=10, v_count=10, degree=3)
+  # re-approximate from sampled point grid
+```
+
+**Tier 15C — Conversion**
+
+```python
+mesh_to_nurbs(mesh, patch_size="auto", degree=3, tolerance=0.1)
+  # mesh: PartikusShape or Part.Shape; patch_size: "coarse" | "auto" | "fine"
+  # Fits a BSplineSurface to the mesh vertex cloud
+```
+
+**Tier 15D — Analysis** — return plain dicts, not PartikusShape
+
+```python
+analyze_curvature(surface, mode="gaussian")
+  # mode: "gaussian" | "mean" | "max" | "min"
+  # returns {"mode", "min", "max", "mean", "sample_count", "unit"}
+
+analyze_draft(shape, pull_direction=(0, 0, 1))
+  # returns {"faces": [...], "min_draft_deg", "max_draft_deg", "mean_draft_deg"}
+  # each face entry: {"area_mm2", "draft_angle_deg", "ok"}
+
+analyze_deviation(surface, reference, sample_count=10)
+  # returns {"min_deviation", "max_deviation", "mean_deviation", "rms_deviation"}
 ```
 
 ---
@@ -435,11 +617,11 @@ All dimensions are **mm** unless the parameter name carries a suffix.
 ## Testing
 
 ```bash
-# Full test suite (193 tests, all tiers)
+# Full test suite (552 tests, all tiers)
 squashfs-root/usr/bin/freecadcmd tests/run_tests.py
 
 # Single module
-squashfs-root/usr/bin/freecadcmd tests/test_tier12.py
+squashfs-root/usr/bin/freecadcmd tests/test_tier15.py
 ```
 
 > **Note:** `freecadcmd` captures stdout. The test runner uses `FreeCAD.Console.PrintMessage` + `sys.stderr` so all output is visible in the terminal.
@@ -457,8 +639,15 @@ squashfs-root/usr/bin/freecadcmd tests/test_tier12.py
 | 3 | `test_tier03.py` | all 2D profile types |
 | 2 | `test_tier02.py` | all enhanced primitives |
 | 12 | `test_tier12.py` | extrude/revolve/sweep/loft/pipe |
+| 4 | `test_tier04.py` | all 20 mechanical features |
+| 5 | `test_tier05.py` | fasteners + presets |
+| 6 | `test_tier06.py` | gears/pulleys/bearings |
+| 7 | `test_tier07.py` | enclosure/container features |
+| 8 | `test_tier08.py` | electronics mounting |
+| 13 | `test_tier13.py` | architectural elements |
+| 15 | `test_tier15.py` | NURBS curves + surfaces + analysis |
 
-**Total: 193 tests — 193 passing**
+**Total: 552 tests — 552 passing**
 
 ---
 
@@ -470,35 +659,45 @@ partikus/
 ├── CHANGELOG.md
 ├── HANDOFF.md
 ├── partikus/
-│   ├── __init__.py                  # public API surface
+│   ├── __init__.py                      # public API surface
 │   ├── core/
-│   │   ├── anchors.py               # anchor name constants
-│   │   ├── shape_wrapper.py         # PartikusShape class
-│   │   ├── transforms.py            # rotation_from_to, placement_for_rotation
-│   │   └── document.py              # FreeCAD document management
-│   ├── tier00_foundations.py        # UP/DOWN/NORTH/…/PLANE_XY/…
-│   ├── tier01_primitives.py         # box/cylinder/sphere/…
-│   ├── tier02_enhanced.py           # rounded_box/tube/hemisphere/…
-│   ├── tier03_profiles_2d.py        # rectangle/circle/slot/…  → Part.Wire
-│   ├── tier09_boolean.py            # union/difference/intersection
-│   ├── tier10_modifiers.py          # fillet/chamfer/shell/offset
-│   ├── tier11_patterns.py           # linear_array/grid_array/polar_array/mirror
-│   ├── tier12_sweep_loft.py         # extrude/revolve/sweep/loft/pipe
-│   ├── tier14_assembly.py           # translate/rotate/attach/…
+│   │   ├── anchors.py                   # anchor name constants
+│   │   ├── shape_wrapper.py             # PartikusShape class
+│   │   ├── transforms.py                # rotation_from_to, placement_for_rotation
+│   │   └── document.py                  # FreeCAD document management
+│   ├── presets/
+│   │   ├── screws.py                    # ISO metric screw tables M2–M20
+│   │   └── bearings.py                  # ISO ball bearing tables
+│   ├── tier00_foundations.py            # UP/DOWN/NORTH/…/PLANE_XY/…
+│   ├── tier01_primitives.py             # box/cylinder/sphere/…
+│   ├── tier02_enhanced.py               # rounded_box/tube/hemisphere/…
+│   ├── tier03_profiles_2d.py            # rectangle/circle/slot/…  → Part.Wire
+│   ├── tier04_mechanical.py             # boss/rib/bracket/snap features
+│   ├── tier05_fasteners.py              # bolts/nuts/washers/inserts
+│   ├── tier06_mechanical_components.py  # gears/pulleys/bearings/couplings
+│   ├── tier07_enclosures.py             # lid/snap_fit_box/cable_channel/…
+│   ├── tier08_electronics.py            # pcb_standoff/rpi_mount/usb_cutout/…
+│   ├── tier09_boolean.py                # union/difference/intersection
+│   ├── tier10_modifiers.py              # fillet/chamfer/shell/offset
+│   ├── tier11_patterns.py               # linear_array/grid_array/polar_array/mirror
+│   ├── tier12_sweep_loft.py             # extrude/revolve/sweep/loft/pipe
+│   ├── tier13_architectural.py          # wall/stairs/roof/column/beam/slab/truss
+│   ├── tier14_assembly.py               # translate/rotate/attach/…
+│   ├── tier15a_nurbs.py                 # NURBS/B-spline curves (surfaces stubbed)
+│   ├── tier15b_subd.py                  # SubD stubs — no FreeCAD 1.1.1 native SubD
+│   ├── tier15c_conversion.py            # mesh_to_nurbs (real); SubD conversions stubbed
+│   ├── tier15d_analysis.py              # curvature/draft/deviation (real); zebra/reflection stubbed
 │   └── gui/
-│       ├── auto_dialog.py           # introspection-based PySide2 dialog builder
-│       └── workbench.py             # FreeCAD workbench registration
+│       ├── auto_dialog.py               # introspection-based PySide2 dialog builder
+│       └── workbench.py                 # FreeCAD workbench registration
 ├── tests/
-│   ├── run_tests.py                 # headless test runner
+│   ├── run_tests.py                     # headless test runner
 │   ├── test_core.py
-│   ├── test_tier01.py
-│   ├── test_tier02.py
-│   ├── test_tier03.py
-│   ├── test_tier09.py
-│   ├── test_tier10.py
-│   ├── test_tier11.py
-│   ├── test_tier12.py
-│   └── test_tier14.py
+│   ├── test_tier01.py  test_tier02.py  test_tier03.py
+│   ├── test_tier04.py  test_tier05.py  test_tier06.py
+│   ├── test_tier07.py  test_tier08.py
+│   ├── test_tier09.py  test_tier10.py  test_tier11.py  test_tier12.py
+│   ├── test_tier13.py  test_tier14.py  test_tier15.py
 └── examples/
     └── capped_cylinder.py
 ```
@@ -510,29 +709,42 @@ partikus/
 ```
 Milestone 1 ✅  Foundation
   Core PartikusShape wrapper, anchor system, Tiers 0 / 1 / 9 / 14 + GUI dialogs
-  193 tests — 70 baseline tests passing
+  70 tests — all passing
 
-Milestone 2 ✅  Practical Utility  ← current
+Milestone 2 ✅  Practical Utility
   Tiers 2 / 3 / 10 / 11 / 12
   193 tests — all passing
 
-Milestone 3 ⬜  Mechanical Depth
+Milestone 3 ✅  Mechanical Depth
   Tier 4 — bosses, ribs, brackets, snap features
   Tier 5 — fasteners (hex bolts, socket heads, nuts, washers, inserts)
   Tier 6 — gears, hinges, bearing pockets, pulleys
+  340 tests — all passing
 
-Milestone 4 ⬜  Application Domains
-  Tier 7 — enclosures (snap-fit, hinged, magnetic closure)
-  Tier 8 — electronics mounts (RPi, Arduino, LED, USB/HDMI cutouts)
-  Tier 13 — architectural (walls, stairs, roof profiles)
+Milestone 4 ✅  Application Domains
+  Tier 7  — enclosures (lids, snap-fit, hinged, battery, vents, cable routing)
+  Tier 8  — electronics (RPi/Arduino mounts, LED, USB/HDMI/barrel/DIN cutouts)
+  Tier 13 — architectural (walls, stairs, roofs, columns, beams, trusses)
+  Tier 15 — NURBS curves implemented; surfaces/SubD/analysis stubbed
+  491 tests — all passing
 
-Milestone 5 ⬜  Freeform Surfaces
-  Tier 15A — NURBS curves & surfaces
-  Tier 15B — Subdivision surfaces (requires OpenSubDiv integration)
-  Tier 15C — SubD ↔ NURBS conversion
-  Tier 15D — curvature / zebra / draft analysis
+Milestone 5 ✅  Freeform Surfaces
+  Tier 15A — NURBS surfaces: loft_surface, sweep_1rail, patch_fill, boundary_surface,
+             surface_from_points, move_control_point, offset_surface, join_surfaces,
+             rebuild_surface
+  Tier 15B — SubD: all stubbed (FreeCAD 1.1.1 has no native SubD support)
+  Tier 15C — mesh_to_nurbs implemented; SubD conversions stubbed
+  Tier 15D — analyze_curvature, analyze_draft, analyze_deviation implemented;
+             zebra/reflection stubs remain
+  532 tests — all passing
 
-Milestone 6 ⬜  AI Integration (separate project)
+Milestone 6 ✅  Surface Editing Operations  ← current
+  Tier 15A — network_surface, sweep_2rail, trim_surface, split_surface, surface_fillet
+             (untrim, match_surfaces, variable_fillet, surface_chamfer remain stubbed —
+              BRep editing APIs not in FreeCAD 1.x Python)
+  552 tests — all passing
+
+Milestone 7 ⬜  AI Integration (separate project)
   Image → decomposition → toolkit call sequence
   Rendered feedback loop for dimension iteration
   Provenance metadata on all AI-generated objects

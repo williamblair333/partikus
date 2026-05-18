@@ -72,6 +72,19 @@ from .tier06_mechanical_components import (
     bearing_pocket, shaft_coupling,
 )
 
+# Tier 7 — enclosures
+from .tier07_enclosures import (
+    lid, snap_fit_box, hinged_box, magnetic_recess, battery_compartment,
+    cable_channel, strain_relief, vent_slots, display_window, button_cutout,
+)
+
+# Tier 8 — electronics
+from .tier08_electronics import (
+    pcb_standoff, raspberry_pi_mount, arduino_mount, led_holder,
+    usb_cutout, hdmi_cutout, barrel_jack_cutout, din_rail_clip,
+    heatsink_fin_array,
+)
+
 # Tier 9 — booleans
 from .tier09_boolean import (
     union, fuse,
@@ -94,10 +107,46 @@ from .tier12_sweep_loft import (
     extrude, revolve, sweep, loft, pipe,
 )
 
+# Tier 13 — architectural
+from .tier13_architectural import (
+    wall, door, window, stairs, roof_gable, roof_hip, roof_shed,
+    column, beam, slab, truss_simple,
+)
+
 # Tier 14 — assembly
 from .tier14_assembly import (
     translate, rotate, scale, mirror_position,
     attach, stack_on, place_beside, align, coaxial,
+)
+
+# Tier 15A — NURBS curves (surfaces/editing stubbed)
+from .tier15a_nurbs import (
+    nurbs_curve, bspline_curve, bezier_curve, curve_through_points,
+    helix_curve, conic_curve,
+    loft_surface, network_surface, sweep_1rail, sweep_2rail,
+    patch_fill, boundary_surface, surface_from_points,
+    move_control_point, trim_surface, untrim_surface, split_surface,
+    join_surfaces, rebuild_surface, offset_surface, match_surfaces,
+    surface_fillet, variable_fillet, surface_chamfer,
+)
+
+# Tier 15B — SubD (all stubbed)
+from .tier15b_subd import (
+    subd_primitive, subd_push_pull, subd_insert_loop,
+    subd_bevel_edge, subd_bevel_vertex, subd_bridge,
+    subd_subdivide, subd_crease, subd_symmetry,
+    subd_soft_select, subd_sculpt_brush,
+)
+
+# Tier 15C — conversion (stubbed)
+from .tier15c_conversion import (
+    subd_to_nurbs, nurbs_to_subd, mesh_to_subd, mesh_to_nurbs,
+)
+
+# Tier 15D — analysis (stubbed)
+from .tier15d_analysis import (
+    analyze_curvature, analyze_zebra, analyze_reflection,
+    analyze_draft, analyze_deviation,
 )
 
 # Core type
@@ -141,6 +190,13 @@ __all__ = [
     # tier 6
     "spur_gear", "bevel_gear", "rack", "pulley_timing", "sprocket",
     "bearing_pocket", "shaft_coupling",
+    # tier 7
+    "lid", "snap_fit_box", "hinged_box", "magnetic_recess", "battery_compartment",
+    "cable_channel", "strain_relief", "vent_slots", "display_window", "button_cutout",
+    # tier 8
+    "pcb_standoff", "raspberry_pi_mount", "arduino_mount", "led_holder",
+    "usb_cutout", "hdmi_cutout", "barrel_jack_cutout", "din_rail_clip",
+    "heatsink_fin_array",
     # tier 9
     "union", "fuse", "difference", "cut", "intersection", "intersect",
     # tier 10
@@ -149,9 +205,30 @@ __all__ = [
     "linear_array", "grid_array", "polar_array", "mirror",
     # tier 12
     "extrude", "revolve", "sweep", "loft", "pipe",
+    # tier 13
+    "wall", "door", "window", "stairs", "roof_gable", "roof_hip", "roof_shed",
+    "column", "beam", "slab", "truss_simple",
     # tier 14
     "translate", "rotate", "scale", "mirror_position",
     "attach", "stack_on", "place_beside", "align", "coaxial",
+    # tier 15a
+    "nurbs_curve", "bspline_curve", "bezier_curve", "curve_through_points",
+    "helix_curve", "conic_curve",
+    "loft_surface", "network_surface", "sweep_1rail", "sweep_2rail",
+    "patch_fill", "boundary_surface", "surface_from_points",
+    "move_control_point", "trim_surface", "untrim_surface", "split_surface",
+    "join_surfaces", "rebuild_surface", "offset_surface", "match_surfaces",
+    "surface_fillet", "variable_fillet", "surface_chamfer",
+    # tier 15b
+    "subd_primitive", "subd_push_pull", "subd_insert_loop",
+    "subd_bevel_edge", "subd_bevel_vertex", "subd_bridge",
+    "subd_subdivide", "subd_crease", "subd_symmetry",
+    "subd_soft_select", "subd_sculpt_brush",
+    # tier 15c
+    "subd_to_nurbs", "nurbs_to_subd", "mesh_to_subd", "mesh_to_nurbs",
+    # tier 15d
+    "analyze_curvature", "analyze_zebra", "analyze_reflection",
+    "analyze_draft", "analyze_deviation",
     # core
     "PartikusShape",
 ]

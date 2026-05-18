@@ -1,8 +1,8 @@
 # Partikus — Developer Handoff
 
 **Last updated:** 2026-05-18  
-**Status:** Milestone 3 complete — 340 tests passing  
-**Next milestone:** Milestone 4 — Tiers 7, 8, 13, 15 (per original spec)
+**Status:** Milestone 6 (partial) complete — 552 tests passing  
+**Next milestone:** Milestone 6 remainder — AI integration + remaining Tier 15 stubs (SubD, untrim, match, variable_fillet, surface_chamfer)
 
 This document is the single source of truth for picking up development in a new session. Read it top-to-bottom before touching any code.
 
@@ -54,52 +54,53 @@ squashfs-root/usr/bin/freecadcmd my_script.py
 partikus/
 ├── README.md
 ├── CHANGELOG.md
-├── HANDOFF.md                       ← this file
+├── HANDOFF.md                           ← this file
 ├── partikus/
-│   ├── __init__.py                  # public API — import everything from here
+│   ├── __init__.py                      # public API — import everything from here
 │   ├── core/
-│   │   ├── anchors.py               # anchor name string constants
-│   │   ├── shape_wrapper.py         # PartikusShape class
-│   │   ├── transforms.py            # rotation_from_to, placement_for_rotation
-│   │   └── document.py              # FreeCAD document helpers
+│   │   ├── anchors.py                   # anchor name string constants
+│   │   ├── shape_wrapper.py             # PartikusShape class
+│   │   ├── transforms.py                # rotation_from_to, placement_for_rotation
+│   │   └── document.py                  # FreeCAD document helpers
 │   ├── presets/
 │   │   ├── __init__.py
-│   │   ├── screws.py                # ISO metric screw dimensions M2–M20
-│   │   └── bearings.py              # ISO ball bearing dimensions (600/620/630 series)
+│   │   ├── screws.py                    # ISO metric screw dimensions M2–M20
+│   │   └── bearings.py                  # ISO ball bearing dimensions (600/620/630 series)
 │   ├── tier00_foundations.py
 │   ├── tier01_primitives.py
 │   ├── tier02_enhanced.py
 │   ├── tier03_profiles_2d.py
-│   ├── tier04_mechanical.py         # boss, brackets, dovetails, snap clips, etc.
-│   ├── tier05_fasteners.py          # bolts, nuts, washers, inserts, standoffs
+│   ├── tier04_mechanical.py             # boss, brackets, dovetails, snap clips, etc.
+│   ├── tier05_fasteners.py              # bolts, nuts, washers, inserts, standoffs
 │   ├── tier06_mechanical_components.py  # gears, rack, pulleys, sprockets, bearings
+│   ├── tier07_enclosures.py             # lid, snap_fit_box, cable_channel, vents, etc.
+│   ├── tier08_electronics.py            # pcb_standoff, rpi/arduino mounts, cutouts
 │   ├── tier09_boolean.py
 │   ├── tier10_modifiers.py
 │   ├── tier11_patterns.py
 │   ├── tier12_sweep_loft.py
+│   ├── tier13_architectural.py          # wall, stairs, roofs, column, beam, truss
 │   ├── tier14_assembly.py
+│   ├── tier15a_nurbs.py                 # NURBS curves + most surfaces (real); BRep ops stubbed
+│   ├── tier15b_subd.py                  # all stubs — no FreeCAD 1.1.1 SubD support
+│   ├── tier15c_conversion.py            # mesh_to_nurbs (real); SubD conversions stubbed
+│   ├── tier15d_analysis.py              # curvature/draft/deviation (real); zebra/reflection stubbed
 │   └── gui/
 │       ├── auto_dialog.py
 │       └── workbench.py
 ├── tests/
-│   ├── run_tests.py                 # headless runner — start here
+│   ├── run_tests.py                     # headless runner — start here
 │   ├── test_core.py
-│   ├── test_tier01.py
-│   ├── test_tier02.py
-│   ├── test_tier03.py
-│   ├── test_tier04.py
-│   ├── test_tier05.py
-│   ├── test_tier06.py
-│   ├── test_tier09.py
-│   ├── test_tier10.py
-│   ├── test_tier11.py
-│   ├── test_tier12.py
-│   └── test_tier14.py
+│   ├── test_tier01.py  test_tier02.py  test_tier03.py
+│   ├── test_tier04.py  test_tier05.py  test_tier06.py
+│   ├── test_tier07.py  test_tier08.py
+│   ├── test_tier09.py  test_tier10.py  test_tier11.py  test_tier12.py
+│   ├── test_tier13.py  test_tier14.py  test_tier15.py
 └── examples/
     └── capped_cylinder.py
 ```
 
-Tiers 7, 8, 13, 15 are **not yet implemented** — they are specified in the original handoff (`partikus-handoff.md`) and in `README.md §Roadmap`.
+Tier 15 surfaces/SubD/conversion/analysis are **stubbed** — raise `NotImplementedError`. Implement in Milestone 5.
 
 ---
 
@@ -174,13 +175,55 @@ Anchor names are string constants in `core/anchors.py`. Every shape guarantees a
 - 147 new tests → **340 total, all passing**
 - Key fix: `Part.Wire(edges)` fails on non-connected edges — always use `Part.makePolygon(pts)` for complex profiles
 
+### Milestone 4 (2026-05-18)
+
+- `tier07` — 10 enclosure functions: lid, snap_fit_box, hinged_box, magnetic_recess, battery_compartment (AA/AAA/C/D/9V/18650/CR2032/CR2025/CR2016), cable_channel, strain_relief, vent_slots, display_window, button_cutout
+- `tier08` — 9 electronics functions: pcb_standoff, raspberry_pi_mount (3B/3B+/4B/5/Zero/Zero2), arduino_mount (uno/mega/nano/leonardo/micro), led_holder, usb_cutout (USB-A/B/C/Micro/Mini), hdmi_cutout (full/mini/micro), barrel_jack_cutout, din_rail_clip (35mm/15mm), heatsink_fin_array
+- `tier13` — 11 architectural functions: wall (with openings list), door, window, stairs, roof_gable, roof_hip, roof_shed, column, beam, slab, truss_simple
+- `tier15a` — 6 NURBS curve functions (real): nurbs_curve, bspline_curve, bezier_curve, curve_through_points, helix_curve, conic_curve; 17 surface/editing stubs (NotImplementedError)
+- `tier15b` — 11 SubD stubs; `tier15c` — 4 conversion stubs; `tier15d` — 5 analysis stubs
+- 151 new tests → **491 total, all passing**
+
+### Milestone 5 (2026-05-18)
+
+- `tier15a` — 9 surface/editing functions (real): loft_surface, sweep_1rail, patch_fill, boundary_surface, surface_from_points, move_control_point, offset_surface, join_surfaces, rebuild_surface; 9 stubs remain (trim, match, fillet variants)
+- `tier15c` — `mesh_to_nurbs` (real); 3 SubD-related stubs remain
+- `tier15d` — 3 analysis functions (real): analyze_curvature, analyze_draft, analyze_deviation; 2 stubs remain (zebra, reflection)
+- Key fix: `patch_fill` — `Part.makeFilledFace` invalid for planar straight edges; now tries `Part.Face(wire)` first
+- 41 new tests → **532 total, all passing**
+
+### Milestone 6 (partial) (2026-05-18)
+
+- `tier15a` — 5 more surface functions (real):
+  - `network_surface(u_curves, v_curves)` — `BSplineSurface.buildFromNSections` from U-direction wires (discretize → interpolate → BSplineCurve); V curves accepted as guides
+  - `sweep_2rail(profile, rail_a, rail_b)` — discretize both rails → line-segment profiles → `Part.makeLoft(solid=False)` open shell
+  - `trim_surface(surface, trim_shape)` — `raw.cut(cutter)` keeps the portion not covered
+  - `split_surface(surface, splitter)` — `raw.cut(splitter)` + `raw.common(splitter)` → list of PartikusShapes
+  - `surface_fillet(surface_a, surface_b, radius)` — `Part.makeShell` + detect shared edges via `ancestorsOfType` + `shell.makeFillet(r, shared_edges)`
+- Key discoveries:
+  - `Part.makeLoft(profiles, solid=True)` fails for line-segment profiles (isValid=False); `solid=False` (open shell) works
+  - `BSplineSurface.buildFromNSections` requires BSplineCurve objects (not wires); extract via `wire.discretize` + `BSplineCurve.interpolate`
+  - `face.cut(half_space_solid)` and `face.common(half_space_solid)` are the reliable split primitives
+  - `untrim_surface`, `match_surfaces`, `variable_fillet`, `surface_chamfer` remain stubs — BRep editing APIs not exposed in FreeCAD 1.x Python
+- 20 new tests → **552 total, all passing**
+
 ---
 
-## 6. What to Build Next — Milestone 4
+## 6. What to Build Next — Milestone 6 Remainder
 
-Tiers 4, 5, 6 are **complete** (Milestone 3). See §5 for details.
+Remaining stubs in Tier 15:
 
-Tiers 7, 8, 13, 15 are specified in `partikus-handoff.md` (the original spec). Consult that document for the function signatures and behaviour before implementing.
+| Function | File | Blocker |
+|---|---|---|
+| `untrim_surface` | `tier15a_nurbs.py` | Low-level BRep trim removal — not in FreeCAD Python API |
+| `match_surfaces` | `tier15a_nurbs.py` | BRep shape healing — not in FreeCAD Python API |
+| `variable_fillet` | `tier15a_nurbs.py` | Variable-radius fillet — not in FreeCAD Python API |
+| `surface_chamfer` | `tier15a_nurbs.py` | Surface chamfer — not in FreeCAD Python API |
+| `subd_*` (11 functions) | `tier15b_subd.py` | FreeCAD 1.1.1 no SubD; needs OpenSubDiv or Blender exchange |
+| `subd_to_nurbs`, `nurbs_to_subd`, `mesh_to_subd` | `tier15c_conversion.py` | Requires SubD support |
+| `analyze_zebra`, `analyze_reflection` | `tier15d_analysis.py` | Requires rendering pipeline |
+
+Milestone 6 also covers AI integration (separate project — image-to-script pipeline). Start only after explicit user confirmation.
 
 ### Adding a new tier — checklist
 
@@ -266,6 +309,10 @@ _MODULES = [
     "tests.test_tier04",
     "tests.test_tier05",
     "tests.test_tier06",
+    "tests.test_tier07",
+    "tests.test_tier08",
+    "tests.test_tier13",
+    "tests.test_tier15",
 ]
 
 # Imports each module, finds test_* functions, calls them,
@@ -345,11 +392,11 @@ Expected output:
 
 ```
 ============================================================
-  340 passed  |  0 failed
+  532 passed  |  0 failed
 ```
 
 If anything is failing, fix it before adding new code.
 
 ---
 
-*End of handoff. Pick up at Milestone 4 (Tiers 7, 8, 13, 15).*
+*End of handoff. Milestone 5 complete. Pick up at Milestone 6 — remaining Tier 15 stubs + AI integration.*
