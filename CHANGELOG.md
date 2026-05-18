@@ -13,6 +13,61 @@ Versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
 
+## [0.9.0] — 2026-05-18 — Anchor Serialisation, GUI Expansion, SubD, CI
+
+### Added
+
+**Milestone 9 — Anchor serialisation** (`partikus/core/serialise.py`)
+- `save_to_doc(shape, label, doc)` — stores a `PartikusShape` as `Part::FeaturePython`
+  in a FreeCAD document; anchors and orientations persisted via `App::PropertyPythonObject`
+  and survive `.FCStd` save/load round-trips.
+- `load_from_doc(obj)` — reconstructs a `PartikusShape` from a feature created by `save_to_doc`.
+- `auto_dialog._add_to_doc` updated to use `save_to_doc` — GUI-created shapes now preserve
+  anchors in the document tree.
+- Both functions exported from `partikus` public API.
+- 11 new tests → **636 total**.
+
+**Milestone 10 — GUI expansion** (`partikus/gui/workbench.py`)
+- Extended workbench from Tier 1 only to Tiers 1–8 (all 84 shape/feature functions).
+- One toolbar per tier: Primitives, Enhanced, Profiles 2D, Mechanical, Fasteners,
+  Components, Enclosures, Electronics.
+- Full nested `&Partikus` menu tree with one submenu per tier.
+
+**Milestone 11 — CI integration test runner** (`tests/run_integration_tests.py`)
+- Standalone runner for end-to-end AI pipeline tests; fails loudly when
+  `ANTHROPIC_API_KEY` is absent; includes 7 tests covering text analysis,
+  script generation, script execution, multi-part assembly, and STEP export.
+- Usage: `ANTHROPIC_API_KEY=sk-ant-... squashfs-root/usr/bin/freecadcmd tests/run_integration_tests.py`
+
+**Milestone 12 — Tier 15B SubD** (pure-Python Catmull-Clark)
+- `partikus/subd_mesh.py` — `SubDMesh` class with Catmull-Clark subdivision,
+  five primitive constructors (`cube_mesh`, `sphere_mesh`, `cylinder_mesh`,
+  `cone_mesh`, `torus_mesh`), and full suite of SubD operations.
+- `tier15b_subd.py` — all 11 SubD functions now implemented (no longer stubs):
+  `subd_primitive`, `subd_push_pull`, `subd_insert_loop`, `subd_bevel_edge`,
+  `subd_bevel_vertex`, `subd_bridge`, `subd_subdivide`, `subd_crease`,
+  `subd_symmetry`, `subd_soft_select`, `subd_sculpt_brush`.
+  Each returns a `PartikusShape` with `.subd_mesh` for further editing.
+- `tier15c_conversion.py` — `subd_to_nurbs`, `mesh_to_subd`, `nurbs_to_subd`
+  now fully implemented. `mesh_to_subd` uses dihedral-angle feature detection
+  to auto-crease hard edges (>30°) on closed solids.
+- `tier15d_analysis.py` — `analyze_zebra` and `analyze_reflection` now implemented
+  as numerical surface analyses (stripe reflection + reflected-vector divergence).
+- `PartikusShape` gains optional `subd_mesh` slot (None on non-SubD shapes).
+- 61 new tests → **697 total**.
+
+### Key implementation notes
+
+- SubD sphere = subdivided cube with vertices projected onto sphere surface
+  (all-quad topology, no poles).
+- Catmull-Clark crease sharpness decays by 1.0 per iteration (semi-sharp creases
+  use values > 1 for persistent sharpness across multiple subdivision levels).
+- `subd_to_nurbs` path: subdivide 2× → tessellate → `mesh_to_nurbs` fit.
+- `analyze_zebra` / `analyze_reflection` return numerical results, not rendered
+  images; visual zebra analysis requires a rendering pipeline (still deferred).
+
+---
+
 ## [0.8.0] — 2026-05-18 — AI Integration: Image/Text → Partikus Script
 
 ### Added

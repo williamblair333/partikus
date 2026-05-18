@@ -141,12 +141,11 @@ def _humanize(name):
 
 
 def _add_to_doc(label, partikus_shape):
+    from ..core.serialise import save_to_doc
     doc = FreeCAD.ActiveDocument
     if doc is None:
         doc = FreeCAD.newDocument("Partikus")
-    feature = doc.addObject("Part::Feature", label)
-    feature.Shape = partikus_shape.shape
-    doc.recompute()
+    save_to_doc(partikus_shape, label, doc)
     try:
         FreeCADGui.SendMsgToActiveView("ViewFit")
     except Exception:

@@ -73,19 +73,182 @@ def analyze_curvature(surface, mode="gaussian"):
     }
 
 
-def analyze_zebra(surface):
+def analyze_zebra(surface, stripe_count=8, camera_direction=(0, 0, 1), sample_grid=8):
     """
-    Zebra-stripe reflection continuity analysis.
-    (Requires a rendering pipeline — Milestone 6)
+    Numerical zebra-stripe reflection analysis.
+
+    Samples the surface on a grid, reflects a virtual stripe environment off
+    each normal, and returns per-sample stripe IDs. Stripe-ID discontinuities
+    between adjacent samples indicate C0 or G1 breaks.
+
+    Args:
+        surface:          PartikusShape wrapping a Part.Face (BSplineSurface)
+        stripe_count:     number of alternating black/white stripes in the virtual
+                          environment (higher = finer resolution)
+        camera_direction: (x, y, z) unit vector representing the view direction
+        sample_grid:      samples per axis (total = sample_grid²)
+
+    Returns:
+        dict with keys:
+          stripe_ids      — list of (u_frac, v_frac, stripe_id, normal) per sample
+          stripe_count    — stripe count used
+          continuity_hint — "likely_G1" if no stripe ID jumps > 1 between neighbours,
+                            "possible_G0" otherwise
+          sample_count    — total samples
+
+    Example:
+        surf = surface_from_points(my_grid)
+        z    = analyze_zebra(surf, stripe_count=10)
+        print(z["continuity_hint"])
     """
-    raise NotImplementedError("analyze_zebra — planned for Milestone 6")
+    face = _unwrap_shape(surface)
+    if not hasattr(face, "Surface"):
+        raise TypeError("surface must wrap a Part.Face with an underlying BSplineSurface")
+
+    bss     = face.Surface
+    u0, u1, v0, v1 = face.ParameterRange
+    n       = max(2, sample_grid)
+    cam     = FreeCAD.Vector(*camera_direction)
+    cam_len = math.sqrt(cam.x**2 + cam.y**2 + cam.z**2)
+    if cam_len < 1e-10:
+        raise ValueError("camera_direction must be a non-zero vector")
+    cam = FreeCAD.Vector(cam.x / cam_len, cam.y / cam_len, cam.z / cam_len)
+
+    samples = []
+    for i in range(n):
+        u_frac = i / (n - 1)
+        u      = u0 + (u1 - u0) * u_frac
+        for j in range(n):
+            v_frac = j / (n - 1)
+            v      = v0 + (v1 - v0) * v_frac
+            try:
+                normal = face.normalAt(u, v)
+                # Reflect camera direction off the normal: R = D - 2(D·N)N
+                dn     = cam.x * normal.x + cam.y * normal.y + cam.z * normal.z
+                rx     = cam.x - 2 * dn * normal.x
+                ry     = cam.y - 2 * dn * normal.y
+                rz     = cam.z - 2 * dn * normal.z
+                # Map reflected Z to a stripe ID (alternating black/white)
+                angle  = math.atan2(math.sqrt(rx**2 + ry**2), rz)
+                stripe = int(angle / math.pi * stripe_count) % stripe_count
+                samples.append((u_frac, v_frac, stripe,
+                                 (normal.x, normal.y, normal.z)))
+            except Exception:
+                pass
+
+    # Heuristic continuity check: large stripe jumps between neighbours suggest G0
+    continuity = "likely_G1"
+    grid = {}
+    for i_s, (uf, vf, sid, _) in enumerate(samples):
+        ii = round(uf * (n - 1))
+        jj = round(vf * (n - 1))
+        grid[(ii, jj)] = sid
+
+    for ii in range(n):
+        for jj in range(n):
+            sid = grid.get((ii, jj))
+            for di, dj in ((1, 0), (0, 1)):
+                nbr = grid.get((ii + di, jj + dj))
+                if sid is not None and nbr is not None:
+                    jump = abs(sid - nbr)
+                    # Wrap-around jump
+                    jump = min(jump, stripe_count - jump)
+                    if jump > 1:
+                        continuity = "possible_G0"
+
+    return {
+        "stripe_ids":      samples,
+        "stripe_count":    stripe_count,
+        "continuity_hint": continuity,
+        "sample_count":    len(samples),
+    }
 
 
-def analyze_reflection(surface, environment_map=None):
+def analyze_reflection(surface, environment_map=None, camera_direction=(0, 0, 1),
+                       sample_grid=8):
     """
-    Reflection map analysis. (Milestone 6)
+    Numerical reflection analysis — samples the surface and returns the
+    reflected camera direction at each point.
+
+    Useful for detecting surface tangency issues without a rendering pipeline:
+    smooth reflection vectors indicate a G1 surface; discontinuous vectors
+    indicate a G0 (positional-only) join.
+
+    Args:
+        surface:          PartikusShape wrapping a Part.Face
+        environment_map:  reserved for future rendering pipeline support
+        camera_direction: (x, y, z) incident view direction
+        sample_grid:      samples per axis
+
+    Returns:
+        dict with keys:
+          samples         — list of (u_frac, v_frac, (rx, ry, rz), (nx, ny, nz))
+          mean_divergence — mean angular deviation between adjacent reflected vectors (rad)
+          continuity_hint — "likely_G1" if mean_divergence < 0.1 rad, else "possible_G0"
+          sample_count
+
+    Example:
+        surf = surface_from_points(my_grid)
+        r    = analyze_reflection(surf)
+        print(r["continuity_hint"])
     """
-    raise NotImplementedError("analyze_reflection — planned for Milestone 6")
+    face = _unwrap_shape(surface)
+    if not hasattr(face, "Surface"):
+        raise TypeError("surface must wrap a Part.Face with an underlying BSplineSurface")
+
+    bss     = face.Surface
+    u0, u1, v0, v1 = face.ParameterRange
+    n       = max(2, sample_grid)
+    cam     = FreeCAD.Vector(*camera_direction)
+    cam_len = math.sqrt(cam.x**2 + cam.y**2 + cam.z**2)
+    if cam_len < 1e-10:
+        raise ValueError("camera_direction must be non-zero")
+    cam = FreeCAD.Vector(cam.x / cam_len, cam.y / cam_len, cam.z / cam_len)
+
+    samples = []
+    grid    = {}
+    for i in range(n):
+        u_frac = i / (n - 1)
+        u      = u0 + (u1 - u0) * u_frac
+        for j in range(n):
+            v_frac = j / (n - 1)
+            v      = v0 + (v1 - v0) * v_frac
+            try:
+                normal = face.normalAt(u, v)
+                dn     = cam.x * normal.x + cam.y * normal.y + cam.z * normal.z
+                refl   = (cam.x - 2*dn*normal.x,
+                           cam.y - 2*dn*normal.y,
+                           cam.z - 2*dn*normal.z)
+                entry  = (u_frac, v_frac, refl, (normal.x, normal.y, normal.z))
+                samples.append(entry)
+                grid[(i, j)] = refl
+            except Exception:
+                pass
+
+    # Mean divergence between adjacent reflected vectors
+    divergences = []
+    for i in range(n):
+        for j in range(n):
+            r = grid.get((i, j))
+            if r is None:
+                continue
+            for di, dj in ((1, 0), (0, 1)):
+                nbr = grid.get((i + di, j + dj))
+                if nbr is None:
+                    continue
+                dot = sum(r[c] * nbr[c] for c in range(3))
+                dot = max(-1.0, min(1.0, dot))
+                divergences.append(math.acos(dot))
+
+    mean_div    = sum(divergences) / len(divergences) if divergences else 0.0
+    continuity  = "likely_G1" if mean_div < 0.1 else "possible_G0"
+
+    return {
+        "samples":          samples,
+        "mean_divergence":  mean_div,
+        "continuity_hint":  continuity,
+        "sample_count":     len(samples),
+    }
 
 
 def analyze_draft(shape, pull_direction=(0, 0, 1)):

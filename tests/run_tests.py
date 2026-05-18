@@ -34,6 +34,8 @@ _MODULES = [
     "tests.test_tier15",
     "tests.test_io",
     "tests.test_ai",
+    "tests.test_serialise",
+    "tests.test_subd",
 ]
 
 

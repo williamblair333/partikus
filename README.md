@@ -2,11 +2,11 @@
 
 > **A parametric CAD toolkit for FreeCAD. Every part has its place.**
 
-[![Tests](https://img.shields.io/badge/tests-625%20passing-brightgreen)](#testing)
+[![Tests](https://img.shields.io/badge/tests-697%20passing-brightgreen)](#testing)
 [![Python](https://img.shields.io/badge/python-3.11-blue)](https://www.python.org/)
 [![FreeCAD](https://img.shields.io/badge/FreeCAD-1.1.1-orange)](https://www.freecad.org/)
 [![License](https://img.shields.io/badge/license-LGPL--2.1-lightgrey)](LICENSE)
-[![Milestone](https://img.shields.io/badge/milestone-8%20of%208-brightgreen)](#roadmap)
+[![Milestone](https://img.shields.io/badge/milestone-12%20complete-brightgreen)](#roadmap)
 
 ---
 
@@ -42,7 +42,9 @@ The architecture is built for three audiences at once:
   - [Tier 13 — Architectural](#tier-13--architectural)
   - [Tier 14 — Assembly & Positioning](#tier-14--assembly--positioning)
   - [Tier 15A — NURBS Curves](#tier-15a--nurbs-curves)
+  - [Tier 15B — Subdivision Surfaces](#tier-15b--subdivision-surfaces)
 - [Anchor System](#anchor-system)
+- [Document Serialisation](#document-serialisation)
 - [Parameter Conventions](#parameter-conventions)
 - [Testing](#testing)
 - [Project Structure](#project-structure)
@@ -133,6 +135,7 @@ class PartikusShape:
     shape        # Part.Shape — the raw OpenCASCADE geometry
     anchors      # dict[str, FreeCAD.Vector] — named 3D points
     orientations # dict[str, FreeCAD.Vector] — outward normals per anchor
+    subd_mesh    # SubDMesh | None — set on shapes from subd_* functions
 ```
 
 Anchors persist through transforms. After `translate(s, dz=10)`, `s.anchors["TOP"]` moves by 10 automatically.
@@ -500,6 +503,17 @@ rebuild_surface(surface, u_count=10, v_count=10, degree=3)
 mesh_to_nurbs(mesh, patch_size="auto", degree=3, tolerance=0.1)
   # mesh: PartikusShape or Part.Shape; patch_size: "coarse" | "auto" | "fine"
   # Fits a BSplineSurface to the mesh vertex cloud
+
+mesh_to_subd(mesh, preserve_features=True)
+  # Extract SubDMesh topology from a Part.Shape or PartikusShape
+  # preserve_features=True auto-creases edges with dihedral angle > 30°
+
+nurbs_to_subd(surface, density="medium")
+  # Sample a BSplineSurface onto a regular quad grid → SubDMesh
+  # density: "coarse" (4×4) | "medium" (8×8) | "fine" (16×16)
+
+subd_to_nurbs(subd, target_tolerance=0.01)
+  # Subdivide a SubDMesh until smooth, then fit a BSplineSurface
 ```
 
 **Tier 15D — Analysis** — return plain dicts, not PartikusShape
@@ -515,6 +529,80 @@ analyze_draft(shape, pull_direction=(0, 0, 1))
 
 analyze_deviation(surface, reference, sample_count=10)
   # returns {"min_deviation", "max_deviation", "mean_deviation", "rms_deviation"}
+
+analyze_zebra(surface, stripe_count=8, sample_grid=8)
+  # Numerical zebra analysis via normal reflection against a virtual stripe env
+  # returns {"stripe_ids", "continuity_hint": "likely_G1" | "possible_G0", ...}
+
+analyze_reflection(surface, camera_direction=(0,0,1), sample_grid=8)
+  # Numerical reflection analysis — reflected camera vectors across the surface
+  # returns {"samples", "mean_divergence", "continuity_hint", ...}
+```
+
+---
+
+### Tier 15B — Subdivision Surfaces
+
+Pure-Python Catmull-Clark SubD engine with full `subd_*` API. Shapes carry a `subd_mesh` attribute (`SubDMesh`) alongside the BRep solid.
+
+**Primitives**
+
+```python
+subd_primitive(prim_type, **dims)
+  # prim_type: "cube" | "sphere" | "cylinder" | "cone" | "torus"
+  # dims: same keyword arguments as the Tier 1 counterparts
+  # Returns PartikusShape with .subd_mesh set
+```
+
+**Editing operations**
+
+```python
+subd_push_pull(shape, faces, distance)
+  # offset a list of face indices along their average normal
+
+subd_insert_loop(shape, edge)
+  # insert an edge loop through the given edge (u, v) — splits all traversed quads
+
+subd_bevel_edge(shape, edges, size=0.1)
+  # bevel one or more edges; each (u, v) pair splits into a new quad strip
+
+subd_bevel_vertex(shape, vertices, size=0.1)
+  # bevel vertices by cutting each adjacent quad
+
+subd_bridge(shape, face_group_a, face_group_b)
+  # connect two open face groups with a tube of quads
+```
+
+**Mesh control**
+
+```python
+subd_crease(shape, edges, sharpness=2.0)
+  # semi-sharp creases; sharpness ≥ 1 = sharp, decays by 1 per subdivision pass
+
+subd_symmetry(shape, plane="YZ", mode="mirror")
+  # mirror the mesh about "XY" | "XZ" | "YZ" and double the face count
+
+subd_soft_select(shape, vertices, falloff_radius)
+  # returns dict {vertex_index: weight} for falloff-weighted editing
+
+subd_sculpt_brush(shape, point, brush_type, strength, radius)
+  # brush_type: "pull" | "push" | "smooth"
+  # pulls/pushes vertices within radius toward/away from point
+```
+
+**Subdivision**
+
+```python
+subd_subdivide(shape, iterations=1)
+  # Catmull-Clark subdivision; returns new PartikusShape with finer mesh
+```
+
+**Conversion** (see also Tier 15C)
+
+```python
+subd_to_nurbs(shape)          # → BSplineSurface PartikusShape
+mesh_to_subd(mesh, preserve_features=True)   # → SubDMesh
+nurbs_to_subd(surface, density="medium")     # → SubDMesh
 ```
 
 ---
@@ -582,6 +670,40 @@ assembly = attach(
 | `fillet` / `chamfer` | Original anchors preserved (face centres unchanged) |
 | `shell` / `offset` | Recomputed from new bounding box |
 | `linear_array` / `polar_array` | Compound centred; anchors reflect compound BB |
+
+---
+
+## Document Serialisation
+
+`save_to_doc` and `load_from_doc` persist `PartikusShape` objects — including all anchors and orientations — into a FreeCAD `.FCStd` document. Shapes survive a full save/reload round-trip.
+
+```python
+from partikus import save_to_doc, load_from_doc
+import FreeCAD
+
+doc  = FreeCAD.newDocument("Assembly")
+body = box(40, 20, 10)
+
+# Save: creates a Part::FeaturePython with the shape + anchor data serialised
+obj  = save_to_doc(body, label="Baseplate", doc=doc)
+
+doc.save("/tmp/assembly.FCStd")
+
+# Load: reconstruct PartikusShape with original anchors intact
+doc2 = FreeCAD.openDocument("/tmp/assembly.FCStd")
+ps   = load_from_doc(doc2.getObjectsByLabel("Baseplate")[0])
+
+print(ps.anchors["TOP"])   # FreeCAD.Vector — same position as before save
+```
+
+**Functions**
+
+| Function | Description |
+|---|---|
+| `save_to_doc(shape, label, doc=None)` | Create `Part::FeaturePython` in `doc` (default: active doc); returns the FreeCAD object |
+| `load_from_doc(obj)` | Reconstruct `PartikusShape` from a previously saved feature object |
+
+Anchors are stored as `(x, y, z)` tuples via `App::PropertyPythonObject` (pickle). Orientations are stored the same way. A shape saved without orientations loads with `{}` — anchors are always preserved.
 
 ---
 
@@ -665,11 +787,14 @@ All dimensions are **mm** unless the parameter name carries a suffix.
 ## Testing
 
 ```bash
-# Full test suite (625 tests, all tiers)
+# Full test suite (697 tests, all tiers)
 squashfs-root/usr/bin/freecadcmd tests/run_tests.py
 
 # Single module
 squashfs-root/usr/bin/freecadcmd tests/test_tier15.py
+
+# CI integration tests (requires ANTHROPIC_API_KEY)
+squashfs-root/usr/bin/freecadcmd tests/run_integration_tests.py
 ```
 
 > **Note:** `freecadcmd` captures stdout. The test runner uses `FreeCAD.Console.PrintMessage` + `sys.stderr` so all output is visible in the terminal.
@@ -696,8 +821,10 @@ squashfs-root/usr/bin/freecadcmd tests/test_tier15.py
 | 15 | `test_tier15.py` | NURBS curves + surfaces + analysis |
 | I/O | `test_io.py` | export/import (STEP/STL/IGES/BREP/OBJ/FCStd) |
 | AI | `test_ai.py` | code generator, JSON parser, integration (skipped without key) |
+| Serialise | `test_serialise.py` | `save_to_doc` / `load_from_doc` anchor round-trips |
+| SubD | `test_subd.py` | SubDMesh engine, all `subd_*` functions, conversions, analysis |
 
-**Total: 625 tests — 625 passing**
+**Total: 697 tests — 697 passing**
 
 ---
 
@@ -712,9 +839,10 @@ partikus/
 │   ├── __init__.py                      # public API surface
 │   ├── core/
 │   │   ├── anchors.py                   # anchor name constants
-│   │   ├── shape_wrapper.py             # PartikusShape class
+│   │   ├── shape_wrapper.py             # PartikusShape class (shape/anchors/orientations/subd_mesh)
 │   │   ├── transforms.py                # rotation_from_to, placement_for_rotation
-│   │   └── document.py                  # FreeCAD document management
+│   │   ├── document.py                  # FreeCAD document management
+│   │   └── serialise.py                 # save_to_doc / load_from_doc anchor serialisation
 │   ├── presets/
 │   │   ├── screws.py                    # ISO metric screw tables M2–M20
 │   │   └── bearings.py                  # ISO ball bearing tables
@@ -734,9 +862,10 @@ partikus/
 │   ├── tier13_architectural.py          # wall/stairs/roof/column/beam/slab/truss
 │   ├── tier14_assembly.py               # translate/rotate/attach/…
 │   ├── tier15a_nurbs.py                 # NURBS curves + surfaces + editing
-│   ├── tier15b_subd.py                  # SubD stubs — no FreeCAD 1.1.1 native SubD
-│   ├── tier15c_conversion.py            # mesh_to_nurbs (real); SubD conversions stubbed
-│   ├── tier15d_analysis.py              # curvature/draft/deviation (real); zebra/reflection stubbed
+│   ├── tier15b_subd.py                  # pure-Python Catmull-Clark SubD; all subd_* functions
+│   ├── tier15c_conversion.py            # mesh_to_nurbs, mesh_to_subd, nurbs_to_subd, subd_to_nurbs
+│   ├── tier15d_analysis.py              # curvature/draft/deviation/zebra/reflection analysis
+│   ├── subd_mesh.py                     # SubDMesh engine: CC subdivision, primitives, to_partikus_shape
 │   ├── io.py                            # export/import: STEP/STL/IGES/BREP/OBJ/FCStd
 │   ├── ai/                              # AI integration (image/text → Partikus script)
 │   │   ├── __init__.py
@@ -749,6 +878,7 @@ partikus/
 │       └── workbench.py                 # FreeCAD workbench registration
 ├── tests/
 │   ├── run_tests.py                     # headless test runner
+│   ├── run_integration_tests.py         # end-to-end AI tests (requires ANTHROPIC_API_KEY)
 │   ├── test_core.py
 │   ├── test_tier01.py  test_tier02.py  test_tier03.py
 │   ├── test_tier04.py  test_tier05.py  test_tier06.py
@@ -756,6 +886,8 @@ partikus/
 │   ├── test_tier09.py  test_tier10.py  test_tier11.py  test_tier12.py
 │   ├── test_tier13.py  test_tier14.py  test_tier15.py
 │   ├── test_io.py  test_ai.py
+│   ├── test_serialise.py                # anchor serialisation round-trip tests
+│   └── test_subd.py                     # SubDMesh + subd_* + conversion + analysis tests
 └── examples/
     └── capped_cylinder.py
 ```
@@ -807,12 +939,35 @@ Milestone 7 ✅  I/O — Export and Import
                    from_step, from_brep, from_stl
   37 new tests — 589 total, all passing
 
-Milestone 8 ✅  AI Integration  ← current
+Milestone 8 ✅  AI Integration
   partikus/ai/ — analyze_image, analyze_text, generate_script, run_script
   ImageAnalyzer (vision decomposition via Claude API, stdlib HTTP only)
   ScriptGenerator (analysis dict → valid Python), validate_syntax
   36 new tests (generator/parser unit tests; 3 integration tests skip without API key)
   625 total tests — all passing
+
+Milestone 9 ✅  Anchor Serialisation
+  partikus/core/serialise.py — save_to_doc / load_from_doc
+  Anchors + orientations persist through .FCStd save/reload via Part::FeaturePython
+  + App::PropertyPythonObject (pickle). 11 new tests.
+
+Milestone 10 ✅  GUI Expansion — Tiers 1–8
+  partikus/gui/workbench.py rewritten: 8 toolbars, 8 &Partikus submenus
+  84 functions exposed; auto_dialog.py wired to save_to_doc
+
+Milestone 11 ✅  CI Integration Tests
+  tests/run_integration_tests.py — 7 end-to-end AI tests
+  Exits cleanly with error if ANTHROPIC_API_KEY is unset
+
+Milestone 12 ✅  Tier 15B SubD — pure-Python Catmull-Clark  ← current
+  partikus/subd_mesh.py — SubDMesh, cube/sphere/cylinder/cone/torus primitives,
+    full Catmull-Clark subdivision, semi-sharp creases, soft-select, sculpt brushes,
+    symmetry, edge loops, bevel, bridge, to_partikus_shape
+  tier15b_subd.py — all 11 subd_* functions real (no stubs)
+  tier15c_conversion.py — mesh_to_subd, nurbs_to_subd, subd_to_nurbs real
+  tier15d_analysis.py — analyze_zebra, analyze_reflection numerical (software-based)
+  72 new tests in test_subd.py
+  697 total tests — all passing
 ```
 
 ---

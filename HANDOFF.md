@@ -1,8 +1,8 @@
 # Partikus — Developer Handoff
 
 **Last updated:** 2026-05-18  
-**Status:** Milestone 8 (AI integration) complete — 625 tests passing  
-**Next milestone:** Remaining Tier 15 stubs / SubD / GUI expansion
+**Status:** Milestones 1–12 complete — 697 tests passing  
+**Next milestone:** Visual zebra/reflection (rendering pipeline) / visual regression tests
 
 This document is the single source of truth for picking up development in a new session. Read it top-to-bottom before touching any code.
 
@@ -256,24 +256,22 @@ Anchor names are string constants in `core/anchors.py`. Every shape guarantees a
 
 ## 6. What to Build Next
 
-Remaining stubs in Tier 15:
+Remaining stubs in Tier 15A (BRep editing — blocked on FreeCAD Python API):
 
 | Function | File | Blocker |
 |---|---|---|
-| `untrim_surface` | `tier15a_nurbs.py` | Low-level BRep trim removal — not in FreeCAD Python API |
-| `match_surfaces` | `tier15a_nurbs.py` | BRep shape healing — not in FreeCAD Python API |
-| `variable_fillet` | `tier15a_nurbs.py` | Variable-radius fillet — not in FreeCAD Python API |
-| `surface_chamfer` | `tier15a_nurbs.py` | Surface chamfer — not in FreeCAD Python API |
-| `subd_*` (11 functions) | `tier15b_subd.py` | FreeCAD 1.1.1 no SubD; needs OpenSubDiv or Blender exchange |
-| `subd_to_nurbs`, `nurbs_to_subd`, `mesh_to_subd` | `tier15c_conversion.py` | Requires SubD support |
-| `analyze_zebra`, `analyze_reflection` | `tier15d_analysis.py` | Requires rendering pipeline |
+| `untrim_surface` | `tier15a_nurbs.py` | BRep trim removal not in FreeCAD Python API |
+| `match_surfaces` | `tier15a_nurbs.py` | BRep shape healing not in FreeCAD Python API |
+| `variable_fillet` | `tier15a_nurbs.py` | Variable-radius fillet not in FreeCAD Python API |
+| `surface_chamfer` | `tier15a_nurbs.py` | Surface chamfer not in FreeCAD Python API |
+| `analyze_zebra` (visual) | `tier15d_analysis.py` | Rendering pipeline needed for actual stripe image |
+| `analyze_reflection` (visual) | `tier15d_analysis.py` | Rendering pipeline needed |
 
-All eight milestones are complete. Candidate next steps:
+Milestones 9–12 done. Candidate next steps:
 
-1. **Tier 15B SubD** — requires OpenSubDiv or Blender exchange; blocked on FreeCAD
-2. **GUI expansion** — extend `workbench.py` to cover Tiers 2–8 with auto-generated dialogs
-3. **Anchor serialisation** — persist anchors to `.FCStd` as `FreeCAD.PropertyPythonObject`
-4. **Integration test suite** — run the AI pipeline end-to-end with a live API key in CI
+1. **Visual zebra/reflection** — integrate a headless renderer (e.g., FreeCAD's `FreeCADGui.offscreen_render`) for actual stripe images
+2. **Visual regression tests** — render reference shapes; detect drift
+3. **Anchor serialisation round-trip tests** — already done; extend to test `from_step` + `save_to_doc` pipeline
 
 ### Adding a new tier — checklist
 
@@ -444,7 +442,7 @@ Expected output:
 
 ```
 ============================================================
-  625 passed  |  0 failed
+  697 passed  |  0 failed
 ```
 
 If anything is failing, fix it before adding new code.

@@ -11,12 +11,13 @@ class PartikusShape:
         orientations — dict[str, FreeCAD.Vector] of outward normals at each anchor
     """
 
-    __slots__ = ("shape", "anchors", "orientations")
+    __slots__ = ("shape", "anchors", "orientations", "subd_mesh")
 
     def __init__(self, shape, anchors, orientations=None):
         self.shape = shape
         self.anchors = anchors
         self.orientations = orientations or {}
+        self.subd_mesh = None
 
     # ------------------------------------------------------------------ repr
 

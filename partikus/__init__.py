@@ -130,7 +130,7 @@ from .tier15a_nurbs import (
     surface_fillet, variable_fillet, surface_chamfer,
 )
 
-# Tier 15B — SubD (all stubbed)
+# Tier 15B — SubD (pure-Python Catmull-Clark)
 from .tier15b_subd import (
     subd_primitive, subd_push_pull, subd_insert_loop,
     subd_bevel_edge, subd_bevel_vertex, subd_bridge,
@@ -138,12 +138,12 @@ from .tier15b_subd import (
     subd_soft_select, subd_sculpt_brush,
 )
 
-# Tier 15C — conversion (stubbed)
+# Tier 15C — conversion
 from .tier15c_conversion import (
     subd_to_nurbs, nurbs_to_subd, mesh_to_subd, mesh_to_nurbs,
 )
 
-# Tier 15D — analysis (stubbed)
+# Tier 15D — analysis
 from .tier15d_analysis import (
     analyze_curvature, analyze_zebra, analyze_reflection,
     analyze_draft, analyze_deviation,
@@ -159,8 +159,9 @@ from .io import (
 # to avoid pulling in AI deps when not needed)
 # Usage: from partikus.ai import generate_script, analyze_image
 
-# Core type
+# Core type + document serialisation
 from .core.shape_wrapper import PartikusShape
+from .core.serialise import save_to_doc, load_from_doc
 
 __all__ = [
     # foundations
@@ -244,4 +245,6 @@ __all__ = [
     "from_step", "from_brep", "from_stl",
     # core
     "PartikusShape",
+    # document serialisation
+    "save_to_doc", "load_from_doc",
 ]

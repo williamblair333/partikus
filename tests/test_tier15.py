@@ -589,18 +589,15 @@ def test_surface_chamfer_stub():
 
 # ── SubD stubs ────────────────────────────────────────────────────────────────
 
-def test_subd_primitive_stub():
-    try:
-        subd_primitive("cube")
-        assert False
-    except NotImplementedError:
-        pass
+def test_subd_primitive_cube_works():
+    ps = subd_primitive("cube", size=20)
+    assert ps.shape.Volume > 0
 
-def test_subd_subdivide_stub():
+def test_subd_subdivide_invalid_input_raises():
     try:
         subd_subdivide(None)
-        assert False
-    except NotImplementedError:
+        assert False, "Expected TypeError"
+    except TypeError:
         pass
 
 
@@ -632,11 +629,11 @@ def test_mesh_to_nurbs_bad_patch_size():
     except ValueError:
         pass
 
-def test_subd_to_nurbs_stub():
+def test_subd_to_nurbs_invalid_input_raises():
     try:
         subd_to_nurbs(None)
-        assert False
-    except NotImplementedError:
+        assert False, "Expected TypeError"
+    except TypeError:
         pass
 
 
@@ -718,9 +715,9 @@ def test_analyze_deviation_keys():
     for k in ("min_deviation","max_deviation","mean_deviation","rms_deviation","sample_count"):
         assert k in info
 
-def test_analyze_zebra_stub():
+def test_analyze_zebra_invalid_input_raises():
     try:
         analyze_zebra(None)
-        assert False
-    except NotImplementedError:
+        assert False, "Expected TypeError"
+    except TypeError:
         pass
