@@ -25,6 +25,9 @@ _MODULES = [
     "tests.test_tier03",
     "tests.test_tier02",
     "tests.test_tier12",
+    "tests.test_tier04",
+    "tests.test_tier05",
+    "tests.test_tier06",
 ]
 
 

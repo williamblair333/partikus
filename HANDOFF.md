@@ -1,8 +1,8 @@
 # Partikus — Developer Handoff
 
 **Last updated:** 2026-05-18  
-**Status:** Milestone 2 complete — 193 tests passing  
-**Next milestone:** Milestone 3 — Mechanical Depth (Tiers 4, 5, 6)
+**Status:** Milestone 3 complete — 340 tests passing  
+**Next milestone:** Milestone 4 — Tiers 7, 8, 13, 15 (per original spec)
 
 This document is the single source of truth for picking up development in a new session. Read it top-to-bottom before touching any code.
 
@@ -62,10 +62,17 @@ partikus/
 │   │   ├── shape_wrapper.py         # PartikusShape class
 │   │   ├── transforms.py            # rotation_from_to, placement_for_rotation
 │   │   └── document.py              # FreeCAD document helpers
+│   ├── presets/
+│   │   ├── __init__.py
+│   │   ├── screws.py                # ISO metric screw dimensions M2–M20
+│   │   └── bearings.py              # ISO ball bearing dimensions (600/620/630 series)
 │   ├── tier00_foundations.py
 │   ├── tier01_primitives.py
 │   ├── tier02_enhanced.py
 │   ├── tier03_profiles_2d.py
+│   ├── tier04_mechanical.py         # boss, brackets, dovetails, snap clips, etc.
+│   ├── tier05_fasteners.py          # bolts, nuts, washers, inserts, standoffs
+│   ├── tier06_mechanical_components.py  # gears, rack, pulleys, sprockets, bearings
 │   ├── tier09_boolean.py
 │   ├── tier10_modifiers.py
 │   ├── tier11_patterns.py
@@ -80,6 +87,9 @@ partikus/
 │   ├── test_tier01.py
 │   ├── test_tier02.py
 │   ├── test_tier03.py
+│   ├── test_tier04.py
+│   ├── test_tier05.py
+│   ├── test_tier06.py
 │   ├── test_tier09.py
 │   ├── test_tier10.py
 │   ├── test_tier11.py
@@ -89,7 +99,7 @@ partikus/
     └── capped_cylinder.py
 ```
 
-Tiers 4–8, 13, 15 are **not yet implemented** — they are specified in the original handoff (`partikus-handoff.md`) and in `README.md §Roadmap`.
+Tiers 7, 8, 13, 15 are **not yet implemented** — they are specified in the original handoff (`partikus-handoff.md`) and in `README.md §Roadmap`.
 
 ---
 
@@ -154,78 +164,23 @@ Anchor names are string constants in `core/anchors.py`. Every shape guarantees a
 - 123 new tests → **193 total, all passing**
 - Fixed: `Part.makeEllipse` doesn't exist in FreeCAD 1.1.1 — use `Part.Ellipse(center, major_r, minor_r).toShape()`
 
+### Milestone 3 (2026-05-18)
+
+- `presets/screws.py` — ISO metric screw dimension tables M2–M20 (thread, head, nut, washer, clearance, heat-set insert dims)
+- `presets/bearings.py` — ISO ball bearing tables (600/620/630 series)
+- `tier04` — 20 mechanical features: boss, counterbore_hole, countersink_hole, slot_hole, keyway, rib, gusset, flange, lip, l_bracket, t_bracket, u_bracket, tab, slot_cutout, dovetail_pin/slot, tongue, groove, living_hinge, snap_clip
+- `tier05` — 14 fastener functions: threaded_rod, tapped_hole, hex/socket/button/flat head bolts, hex_nut, flat/lock washer, heat_set_insert_pocket, clearance_hole, screw_size_preset, standoff, dowel_pin. Cosmetic (smooth cylinder) — no helical thread geometry.
+- `tier06` — 7 mechanical components: spur_gear (true 16-pt/flank involute polyline via `Part.makePolygon`), bevel_gear (frustum), rack, pulley_timing, sprocket, bearing_pocket, shaft_coupling
+- 147 new tests → **340 total, all passing**
+- Key fix: `Part.Wire(edges)` fails on non-connected edges — always use `Part.makePolygon(pts)` for complex profiles
+
 ---
 
-## 6. What to Build Next — Milestone 3
+## 6. What to Build Next — Milestone 4
 
-### Tier 4 — Mechanical Features
+Tiers 4, 5, 6 are **complete** (Milestone 3). See §5 for details.
 
-All return `PartikusShape` centred at origin.
-
-```python
-boss(diameter, height, hole_diameter=None)
-counterbore_hole(thru_diameter, bore_diameter, bore_depth, depth)
-countersink_hole(thru_diameter, head_diameter, head_angle_deg=82, depth)
-slot_hole(length, width, depth)
-keyway(width, depth, length)
-rib(length, height, thickness, draft_angle_deg=0)
-gusset(length, height, thickness)
-flange(inner_diameter, outer_diameter, thickness, hole_pattern=None)
-lip(outer_diameter, height, lip_width, lip_height)
-l_bracket(length, height, thickness, width)
-t_bracket(arm_length, stem_length, width, thickness)
-u_bracket(length, height, width, thickness, leg_height)
-tab(width, height, thickness)
-slot_cutout(width, height, depth)
-dovetail_pin(length, narrow_width, wide_width, height)
-dovetail_slot(...)
-tongue(length, width, height)
-groove(length, width, depth)
-living_hinge(length, thickness, hinge_width)
-snap_clip(length, width, hook_height, flex_arm_length)
-```
-
-### Tier 5 — Fasteners & Standard Parts
-
-Use ISO standard dimension tables (stored in `partikus/presets/screws.py`, `bearings.py`).
-
-```python
-# Threaded
-threaded_rod(diameter, length, pitch=None, thread_form="metric")
-tapped_hole(diameter, depth, pitch=None)
-
-# Bolts
-hex_bolt(diameter, length, ...)
-socket_head_bolt(diameter, length)
-button_head_bolt(diameter, length)
-flat_head_bolt(diameter, length)
-
-# Nuts / washers
-hex_nut(diameter, ...)
-flat_washer(bolt_diameter, ...)
-lock_washer(bolt_diameter)
-
-# Holes / inserts
-heat_set_insert_pocket(insert_size)   # e.g. "M3", "M4"
-clearance_hole(bolt_size, depth, fit="close")
-screw_size_preset(name)               # returns dict with all ISO dims
-
-# Other
-standoff(diameter, length, thread_size=None)
-dowel_pin(diameter, length)
-```
-
-### Tier 6 — Mechanical Components
-
-```python
-spur_gear(teeth, module, thickness, pressure_angle_deg=20)
-bevel_gear(teeth, module, cone_angle_deg, thickness)
-rack(teeth, module, length, height)
-pulley_timing(teeth, belt_type, width)    # "GT2", "HTD"
-sprocket(teeth, chain_pitch, thickness)
-bearing_pocket(bearing_id, depth)         # "608", "6004", etc.
-shaft_coupling(shaft1_diameter, shaft2_diameter, length)
-```
+Tiers 7, 8, 13, 15 are specified in `partikus-handoff.md` (the original spec). Consult that document for the function signatures and behaviour before implementing.
 
 ### Adding a new tier — checklist
 
@@ -240,7 +195,19 @@ shaft_coupling(shaft1_diameter, shaft2_diameter, length)
 
 ---
 
-## 7. Known Limitations & Gotchas
+## 7. Decided Design Questions
+
+These were open in §11 — now decided:
+
+1. **Threaded geometry (Tier 5):** Cosmetic (smooth cylinder at nominal diameter). `cosmetic=False` reserved but raises `NotImplementedError`. Decision rationale: real helices make OpenCASCADE booleans unreliable and add no fabrication value.
+
+2. **Gear involute (Tier 6):** 16-point polyline approximation per flank via `Part.makePolygon`. Do NOT use `Part.Wire(edges)` — it fails on non-connected edges. Always collect all points into a flat list and call `Part.makePolygon` for complex profiles.
+
+3. **SubD (Tier 15B):** Deferred — no native FreeCAD 1.1.1 support. Stub with `NotImplementedError`.
+
+4. **Anchor serialisation:** Still deferred. Not needed for scripting workflows.
+
+## 8. Known Limitations & Gotchas
 
 ### FreeCAD 1.1.1 API surface
 
@@ -282,7 +249,7 @@ The test runner is a hand-rolled loop (no pytest dependency — pytest isn't bun
 
 ---
 
-## 8. Test Runner
+## 9. Test Runner
 
 ```python
 # tests/run_tests.py — how it works
@@ -296,6 +263,9 @@ _MODULES = [
     "tests.test_tier03",
     "tests.test_tier02",
     "tests.test_tier12",
+    "tests.test_tier04",
+    "tests.test_tier05",
+    "tests.test_tier06",
 ]
 
 # Imports each module, finds test_* functions, calls them,
@@ -306,7 +276,7 @@ Add new modules to `_MODULES` in the order you want them run.
 
 ---
 
-## 9. GUI Layer (not needed for headless work)
+## 10. GUI Layer (not needed for headless work)
 
 `gui/auto_dialog.py` builds PySide2 dialogs by introspecting function signatures:
 
@@ -325,7 +295,7 @@ The workbench (`gui/workbench.py`) registers commands for Tier 1 only. Expand it
 
 ---
 
-## 10. Parameter Naming — Non-Negotiable
+## 11. Parameter Naming — Non-Negotiable
 
 These rules apply to every function in every tier:
 
@@ -348,27 +318,21 @@ Never shorten (`dia`, `wid`, `h`, `len`, etc.). The AI downstream needs to guess
 
 ---
 
-## 11. Design Questions Left Open
+## 12. Design Questions Remaining
 
-These were deferred and still need decisions before implementing the relevant tiers:
+1. **SubD (Tier 15B):** FreeCAD 1.1.1 has no native SubD support. Options: (a) integrate OpenSubDiv via ctypes, (b) delegate to Blender + OBJ exchange, (c) stub with `NotImplementedError` and revisit. Decision needed before Milestone 5.
 
-1. **Threaded geometry (Tier 5):** Real helical threads are expensive. Offer `cosmetic=True` (visual-only) as default, `cosmetic=False` for full geometry? Or always cosmetic at this level?
-
-2. **Gear involute (Tier 6):** OpenCASCADE can't generate involute gear profiles natively. Either: (a) approximate with polyline from precomputed points, (b) integrate a gear library (e.g. `cadquery`'s approach), or (c) use FreeCAD's `PartDesign.InvoluteGear` if accessible.
-
-3. **SubD (Tier 15B):** FreeCAD 1.1.1 has no native SubD support. Options: (a) integrate OpenSubDiv via ctypes, (b) delegate to Blender + OBJ exchange, (c) stub with `NotImplementedError` and revisit. Decision needed before Milestone 5.
-
-4. **Anchor serialisation:** Anchors are currently only in-memory. For saving/loading `PartikusShape` from `.FCStd`, anchors must be serialised (e.g., as a `FreeCAD.PropertyPythonObject` on the feature). Not needed for scripting workflows; needed for GUI round-trips.
+2. **Anchor serialisation:** Anchors are currently only in-memory. For saving/loading `PartikusShape` from `.FCStd`, anchors must be serialised (e.g., as a `FreeCAD.PropertyPythonObject` on the feature). Not needed for scripting workflows; needed for GUI round-trips.
 
 ---
 
-## 12. Original Specification
+## 13. Original Specification
 
 The full original spec (all 16 tiers, GUI spec, AI workflow, open questions) is in `partikus-handoff.md` at the repo root. That document has not been modified — treat it as the authoritative spec.
 
 ---
 
-## 13. Quick Sanity Check
+## 14. Quick Sanity Check
 
 Run this before writing a single line:
 
@@ -381,11 +345,11 @@ Expected output:
 
 ```
 ============================================================
-  193 passed  |  0 failed
+  340 passed  |  0 failed
 ```
 
 If anything is failing, fix it before adding new code.
 
 ---
 
-*End of handoff. Pick up at Milestone 3.*
+*End of handoff. Pick up at Milestone 4 (Tiers 7, 8, 13, 15).*

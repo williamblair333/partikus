@@ -49,6 +49,29 @@ from .tier03_profiles_2d import (
     slot, teardrop, arc, polyline,
 )
 
+# Tier 4 — mechanical features
+from .tier04_mechanical import (
+    boss, counterbore_hole, countersink_hole, slot_hole, keyway,
+    rib, gusset, flange, lip, l_bracket, t_bracket, u_bracket,
+    tab, slot_cutout, dovetail_pin, dovetail_slot, tongue, groove,
+    living_hinge, snap_clip,
+)
+
+# Tier 5 — fasteners & standard parts
+from .tier05_fasteners import (
+    threaded_rod, tapped_hole,
+    hex_bolt, socket_head_bolt, button_head_bolt, flat_head_bolt,
+    hex_nut, flat_washer, lock_washer,
+    heat_set_insert_pocket, clearance_hole, screw_size_preset,
+    standoff, dowel_pin,
+)
+
+# Tier 6 — mechanical components
+from .tier06_mechanical_components import (
+    spur_gear, bevel_gear, rack, pulley_timing, sprocket,
+    bearing_pocket, shaft_coupling,
+)
+
 # Tier 9 — booleans
 from .tier09_boolean import (
     union, fuse,
@@ -104,6 +127,20 @@ __all__ = [
     "rectangle", "rounded_rectangle", "chamfered_rectangle",
     "circle", "ellipse", "regular_polygon", "star",
     "slot", "teardrop", "arc", "polyline",
+    # tier 4
+    "boss", "counterbore_hole", "countersink_hole", "slot_hole", "keyway",
+    "rib", "gusset", "flange", "lip", "l_bracket", "t_bracket", "u_bracket",
+    "tab", "slot_cutout", "dovetail_pin", "dovetail_slot", "tongue", "groove",
+    "living_hinge", "snap_clip",
+    # tier 5
+    "threaded_rod", "tapped_hole",
+    "hex_bolt", "socket_head_bolt", "button_head_bolt", "flat_head_bolt",
+    "hex_nut", "flat_washer", "lock_washer",
+    "heat_set_insert_pocket", "clearance_hole", "screw_size_preset",
+    "standoff", "dowel_pin",
+    # tier 6
+    "spur_gear", "bevel_gear", "rack", "pulley_timing", "sprocket",
+    "bearing_pocket", "shaft_coupling",
     # tier 9
     "union", "fuse", "difference", "cut", "intersection", "intersect",
     # tier 10
