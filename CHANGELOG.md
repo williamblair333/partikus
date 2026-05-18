@@ -13,6 +13,61 @@ Versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
 
+## [0.8.0] — 2026-05-18 — AI Integration: Image/Text → Partikus Script
+
+### Added
+
+**`partikus/ai/`** — new subpackage for AI-driven shape decomposition
+
+- `_http.py` — minimal stdlib-only Anthropic API client using system CA bundle
+  (`/etc/ssl/certs/ca-certificates.crt`); works inside FreeCAD AppImage without
+  any external HTTP library
+- `analyzer.py` — `ImageAnalyzer` class:
+  - `analyze(image_path, hint)` — base64-encodes image, sends to Claude vision API,
+    parses JSON response; accepts JPEG/PNG/GIF/WEBP
+  - `analyze_text(description, hint)` — same decomposition without image input
+  - `_extract_json(text)` — robust JSON extraction: handles fenced blocks,
+    preamble text, and bare JSON objects
+  - `_validate_analysis(d)` — validates required keys and sets defaults
+- `generator.py` — `ScriptGenerator` class:
+  - `generate(analysis, export_step, export_stl)` — converts analysis dict to
+    a complete, importable Partikus Python script with correct `from partikus import`
+    header, shape assignments, assembly steps, and optional export calls
+  - `validate_syntax(script)` — AST syntax check; returns `(bool, error_or_None)`
+- `pipeline.py` — high-level entry points:
+  - `analyze_image(path, hint, model)` → shape decomposition dict
+  - `analyze_text(description, hint, model)` → shape decomposition dict (no image)
+  - `generate_script(source, hint, export_step, export_stl)` → Python string;
+    auto-detects image vs text input
+  - `run_script(script, freecadcmd, timeout)` → `(stdout, stderr, returncode)`;
+    auto-locates `freecadcmd` relative to project root or via PATH
+- `__init__.py` — exports all public symbols; includes usage examples in docstring
+
+**System prompt** — compact but complete Partikus API reference covering 25+
+functions across tiers 1/2/9/10/12/14; specifies JSON output schema with
+`shapes`/`assembly`/`final`/`estimated_dimensions_mm` structure
+
+### Key design decisions
+
+- **No external dependencies** — HTTP calls use Python `urllib` with system CA bundle;
+  no `requests`, no `anthropic` SDK required (works in AppImage's bundled Python)
+- **Graceful skip without API key** — all integration tests return early (pass) when
+  `ANTHROPIC_API_KEY` is absent; unit tests cover all non-network logic
+- **Lazy import** — `partikus.ai` is not imported by `partikus.__init__` to avoid
+  any cost when AI is not used
+- **Model default** — `claude-sonnet-4-6` (current Sonnet); overridable per call
+
+### Tests
+
+- 36 new tests in `tests/test_ai.py`:
+  - Unit: `_safe_id`, `_format_params`, `ScriptGenerator.generate`, `validate_syntax`,
+    `_extract_json`, `_validate_analysis` — no API key needed
+  - Integration: `test_integration_analyze_text_box`, `test_integration_generate_script_text`,
+    `test_integration_script_runs` — skip silently without `ANTHROPIC_API_KEY`
+- **625 total tests — all passing**
+
+---
+
 ## [0.7.0] — 2026-05-18 — I/O Module: Export and Import
 
 ### Added
@@ -360,7 +415,8 @@ All functions accept flexible `shapes` input: single PartikusShape, list of Part
 
 ---
 
-[Unreleased]: https://github.com/williamblair333/partikus/compare/v0.7.0...HEAD
+[Unreleased]: https://github.com/williamblair333/partikus/compare/v0.8.0...HEAD
+[0.8.0]: https://github.com/williamblair333/partikus/compare/v0.7.0...v0.8.0
 [0.7.0]: https://github.com/williamblair333/partikus/compare/v0.6.0...v0.7.0
 [0.6.0]: https://github.com/williamblair333/partikus/compare/v0.5.0...v0.6.0
 [0.5.0]: https://github.com/williamblair333/partikus/compare/v0.4.0...v0.5.0

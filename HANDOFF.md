@@ -1,8 +1,8 @@
 # Partikus — Developer Handoff
 
 **Last updated:** 2026-05-18  
-**Status:** Milestone 7 (I/O) complete — 589 tests passing  
-**Next milestone:** Milestone 8 — AI integration (image-to-script pipeline)
+**Status:** Milestone 8 (AI integration) complete — 625 tests passing  
+**Next milestone:** Remaining Tier 15 stubs / SubD / GUI expansion
 
 This document is the single source of truth for picking up development in a new session. Read it top-to-bottom before touching any code.
 
@@ -86,6 +86,12 @@ partikus/
 │   ├── tier15c_conversion.py            # mesh_to_nurbs (real); SubD conversions stubbed
 │   ├── tier15d_analysis.py              # curvature/draft/deviation (real); zebra/reflection stubbed
 │   ├── io.py                            # export (STEP/STL/IGES/BREP/OBJ/FCStd) + import (STEP/BREP/STL)
+│   ├── ai/
+│   │   ├── __init__.py                  # exports analyze_image/text, generate_script, run_script
+│   │   ├── _http.py                     # stdlib-only Anthropic API client (no external deps)
+│   │   ├── analyzer.py                  # ImageAnalyzer — image/text → decomposition JSON
+│   │   ├── generator.py                 # ScriptGenerator — analysis dict → runnable Python
+│   │   └── pipeline.py                  # high-level: analyze_image, analyze_text, generate_script, run_script
 │   └── gui/
 │       ├── auto_dialog.py
 │       └── workbench.py
@@ -97,11 +103,13 @@ partikus/
 │   ├── test_tier07.py  test_tier08.py
 │   ├── test_tier09.py  test_tier10.py  test_tier11.py  test_tier12.py
 │   ├── test_tier13.py  test_tier14.py  test_tier15.py
+│   ├── test_io.py
+│   └── test_ai.py
 └── examples/
     └── capped_cylinder.py
 ```
 
-Tier 15 surfaces/SubD/conversion/analysis are **stubbed** — raise `NotImplementedError`. Implement in Milestone 5.
+Tier 15B (SubD) and 4 Tier 15A BRep-editing functions are **stubbed** — raise `NotImplementedError`. Blocked on missing FreeCAD 1.1.1 API surface.
 
 ---
 
@@ -222,9 +230,31 @@ Anchor names are string constants in `core/anchors.py`. Every shape guarantees a
   - FreeCAD sphere tessellation has a minimum ~8000 facets regardless of deflection until < 0.05 mm
 - 37 new tests → **589 total, all passing**
 
+### Milestone 8 (2026-05-18)
+
+- `partikus/ai/` — new subpackage for AI-driven shape decomposition (no external deps — stdlib only)
+  - `_http.py` — minimal Anthropic API client using `urllib.request`; resolves FreeCAD AppImage SSL
+    by loading `/etc/ssl/certs/ca-certificates.crt` via `ssl.create_default_context(cafile=...)`
+  - `analyzer.py` — `ImageAnalyzer` class: `analyze(image_path, hint)` (vision) and
+    `analyze_text(description, hint)` (text-only); robust JSON parsing (`_extract_json` handles
+    fenced blocks, preamble, bare JSON); validates required keys + sets defaults
+  - `generator.py` — `ScriptGenerator.generate(analysis, export_step, export_stl)` produces runnable
+    Python with safe identifier sanitisation (`_safe_id`), import block, shape definitions, assembly
+    ops, optional export calls; `validate_syntax(script)` uses `ast.parse()`
+  - `pipeline.py` — high-level: `analyze_image`, `analyze_text`, `generate_script`, `run_script`
+    (runs via `freecadcmd`); `_find_freecadcmd()` checks `squashfs-root/` relative path then PATH
+- AI decomposition JSON schema:
+  ```json
+  {"description": "...", "shapes": [{"id": "body", "function": "box", "params": {...}, "note": "..."}],
+   "assembly": [{"result": "asm", "op": "stack_on", "args": ["cap","body"], "params": {}}],
+   "final": "asm", "estimated_dimensions_mm": {"x": 80, "y": 50, "z": 30}}
+  ```
+- Integration tests use `if not _has_api_key(): return` — skip silently when `ANTHROPIC_API_KEY` absent
+- 36 new tests → **625 total, all passing**
+
 ---
 
-## 6. What to Build Next — Milestone 8
+## 6. What to Build Next
 
 Remaining stubs in Tier 15:
 
@@ -238,7 +268,12 @@ Remaining stubs in Tier 15:
 | `subd_to_nurbs`, `nurbs_to_subd`, `mesh_to_subd` | `tier15c_conversion.py` | Requires SubD support |
 | `analyze_zebra`, `analyze_reflection` | `tier15d_analysis.py` | Requires rendering pipeline |
 
-Milestone 8 covers AI integration (separate project — image-to-script pipeline). Start only after explicit user confirmation.
+All eight milestones are complete. Candidate next steps:
+
+1. **Tier 15B SubD** — requires OpenSubDiv or Blender exchange; blocked on FreeCAD
+2. **GUI expansion** — extend `workbench.py` to cover Tiers 2–8 with auto-generated dialogs
+3. **Anchor serialisation** — persist anchors to `.FCStd` as `FreeCAD.PropertyPythonObject`
+4. **Integration test suite** — run the AI pipeline end-to-end with a live API key in CI
 
 ### Adding a new tier — checklist
 
@@ -328,6 +363,8 @@ _MODULES = [
     "tests.test_tier08",
     "tests.test_tier13",
     "tests.test_tier15",
+    "tests.test_io",
+    "tests.test_ai",
 ]
 
 # Imports each module, finds test_* functions, calls them,
@@ -407,11 +444,11 @@ Expected output:
 
 ```
 ============================================================
-  532 passed  |  0 failed
+  625 passed  |  0 failed
 ```
 
 If anything is failing, fix it before adding new code.
 
 ---
 
-*End of handoff. Milestone 5 complete. Pick up at Milestone 6 — remaining Tier 15 stubs + AI integration.*
+*End of handoff. Milestones 1–8 complete. 625 tests passing. Next: GUI expansion, SubD, or anchor serialisation.*

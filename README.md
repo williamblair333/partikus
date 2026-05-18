@@ -2,11 +2,11 @@
 
 > **A parametric CAD toolkit for FreeCAD. Every part has its place.**
 
-[![Tests](https://img.shields.io/badge/tests-589%20passing-brightgreen)](#testing)
+[![Tests](https://img.shields.io/badge/tests-625%20passing-brightgreen)](#testing)
 [![Python](https://img.shields.io/badge/python-3.11-blue)](https://www.python.org/)
 [![FreeCAD](https://img.shields.io/badge/FreeCAD-1.1.1-orange)](https://www.freecad.org/)
 [![License](https://img.shields.io/badge/license-LGPL--2.1-lightgrey)](LICENSE)
-[![Milestone](https://img.shields.io/badge/milestone-6%20of%206-yellow)](#roadmap)
+[![Milestone](https://img.shields.io/badge/milestone-8%20of%208-brightgreen)](#roadmap)
 
 ---
 
@@ -20,7 +20,7 @@ The architecture is built for three audiences at once:
 |---|---|
 | **Human designers** | Call Python functions, combine results, export to STEP/STL |
 | **FreeCAD GUI users** | Auto-generated dialogs appear for every function (no GUI code to write) |
-| **AI agents (future)** | Decompose an image → emit toolkit calls → iterate on render feedback |
+| **AI agents** | `partikus.ai` — image/description → decompose → emit Partikus script |
 
 ---
 
@@ -585,6 +585,54 @@ assembly = attach(
 
 ---
 
+## AI Integration
+
+`partikus.ai` converts images or text descriptions into runnable Partikus scripts using Claude's vision API.
+
+```python
+from partikus.ai import generate_script, run_script
+
+# From a text description (no image needed)
+script = generate_script("a flanged cylinder 30mm diameter × 60mm tall, flange diameter 50mm")
+print(script)
+# → from partikus import cylinder, stack_on
+#   shaft  = cylinder(diameter=30, height=60)
+#   flange = cylinder(diameter=50, height=8)
+#   result = stack_on(shaft, flange)
+
+# Execute via freecadcmd
+out, err, rc = run_script(script)
+
+# From an image
+script = generate_script("photo.jpg", hint="a DIN rail mounting bracket")
+
+# With export
+script = generate_script("a hex nut M8", export_step="nut.step")
+
+# Low-level: analyse then generate
+from partikus.ai import ImageAnalyzer, ScriptGenerator
+analysis = ImageAnalyzer().analyze("photo.jpg")
+# analysis = {"description": "...", "shapes": [...], "assembly": [...], "final": "..."}
+script   = ScriptGenerator().generate(analysis, export_step="out.step")
+ok, err  = validate_syntax(script)
+```
+
+**Requirements:** set `ANTHROPIC_API_KEY` in your environment before use. The module uses only Python stdlib for HTTP (no `requests` / `anthropic` SDK needed).
+
+**Functions:**
+
+| Function | Description |
+|---|---|
+| `analyze_image(path, hint, model)` | Vision analysis → shape decomposition dict |
+| `analyze_text(description, hint, model)` | Text analysis → same dict (no image) |
+| `generate_script(source, hint, export_step, export_stl)` | End-to-end → Python string |
+| `run_script(script, freecadcmd, timeout)` | Execute script → (stdout, stderr, rc) |
+| `ImageAnalyzer().analyze(path)` | Low-level vision call |
+| `ScriptGenerator().generate(analysis)` | Low-level code generation |
+| `validate_syntax(script)` | AST syntax check → (bool, error_or_None) |
+
+---
+
 ## Parameter Conventions
 
 All dimensions are **mm** unless the parameter name carries a suffix.
@@ -617,7 +665,7 @@ All dimensions are **mm** unless the parameter name carries a suffix.
 ## Testing
 
 ```bash
-# Full test suite (589 tests, all tiers)
+# Full test suite (625 tests, all tiers)
 squashfs-root/usr/bin/freecadcmd tests/run_tests.py
 
 # Single module
@@ -647,8 +695,9 @@ squashfs-root/usr/bin/freecadcmd tests/test_tier15.py
 | 13 | `test_tier13.py` | architectural elements |
 | 15 | `test_tier15.py` | NURBS curves + surfaces + analysis |
 | I/O | `test_io.py` | export/import (STEP/STL/IGES/BREP/OBJ/FCStd) |
+| AI | `test_ai.py` | code generator, JSON parser, integration (skipped without key) |
 
-**Total: 589 tests — 589 passing**
+**Total: 625 tests — 625 passing**
 
 ---
 
@@ -689,6 +738,12 @@ partikus/
 │   ├── tier15c_conversion.py            # mesh_to_nurbs (real); SubD conversions stubbed
 │   ├── tier15d_analysis.py              # curvature/draft/deviation (real); zebra/reflection stubbed
 │   ├── io.py                            # export/import: STEP/STL/IGES/BREP/OBJ/FCStd
+│   ├── ai/                              # AI integration (image/text → Partikus script)
+│   │   ├── __init__.py
+│   │   ├── _http.py                     # stdlib-only Anthropic API client
+│   │   ├── analyzer.py                  # ImageAnalyzer — vision decomposition
+│   │   ├── generator.py                 # ScriptGenerator — analysis → Python
+│   │   └── pipeline.py                  # analyze_image, generate_script, run_script
 │   └── gui/
 │       ├── auto_dialog.py               # introspection-based PySide2 dialog builder
 │       └── workbench.py                 # FreeCAD workbench registration
@@ -700,7 +755,7 @@ partikus/
 │   ├── test_tier07.py  test_tier08.py
 │   ├── test_tier09.py  test_tier10.py  test_tier11.py  test_tier12.py
 │   ├── test_tier13.py  test_tier14.py  test_tier15.py
-│   ├── test_io.py
+│   ├── test_io.py  test_ai.py
 └── examples/
     └── capped_cylinder.py
 ```
@@ -747,15 +802,17 @@ Milestone 6 ✅  Surface Editing Operations
               BRep editing APIs not in FreeCAD 1.x Python)
   552 tests — all passing
 
-Milestone 7 ✅  I/O — Export and Import  ← current
+Milestone 7 ✅  I/O — Export and Import
   partikus/io.py — to_step, to_stl, to_iges, to_brep, to_obj, save_fcstd
                    from_step, from_brep, from_stl
   37 new tests — 589 total, all passing
 
-Milestone 8 ⬜  AI Integration (separate project)
-  Image → decomposition → toolkit call sequence
-  Rendered feedback loop for dimension iteration
-  Provenance metadata on all AI-generated objects
+Milestone 8 ✅  AI Integration  ← current
+  partikus/ai/ — analyze_image, analyze_text, generate_script, run_script
+  ImageAnalyzer (vision decomposition via Claude API, stdlib HTTP only)
+  ScriptGenerator (analysis dict → valid Python), validate_syntax
+  36 new tests (generator/parser unit tests; 3 integration tests skip without API key)
+  625 total tests — all passing
 ```
 
 ---

@@ -33,6 +33,7 @@ _MODULES = [
     "tests.test_tier13",
     "tests.test_tier15",
     "tests.test_io",
+    "tests.test_ai",
 ]
 
 

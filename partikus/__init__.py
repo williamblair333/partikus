@@ -155,6 +155,10 @@ from .io import (
     from_step, from_brep, from_stl,
 )
 
+# AI integration — available as partikus.ai (lazy import; not re-exported here
+# to avoid pulling in AI deps when not needed)
+# Usage: from partikus.ai import generate_script, analyze_image
+
 # Core type
 from .core.shape_wrapper import PartikusShape
 
