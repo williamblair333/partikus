@@ -149,6 +149,12 @@ from .tier15d_analysis import (
     analyze_draft, analyze_deviation,
 )
 
+# I/O — export and import
+from .io import (
+    to_step, to_stl, to_iges, to_brep, to_obj, save_fcstd,
+    from_step, from_brep, from_stl,
+)
+
 # Core type
 from .core.shape_wrapper import PartikusShape
 
@@ -229,6 +235,9 @@ __all__ = [
     # tier 15d
     "analyze_curvature", "analyze_zebra", "analyze_reflection",
     "analyze_draft", "analyze_deviation",
+    # I/O
+    "to_step", "to_stl", "to_iges", "to_brep", "to_obj", "save_fcstd",
+    "from_step", "from_brep", "from_stl",
     # core
     "PartikusShape",
 ]

@@ -1,8 +1,8 @@
 # Partikus — Developer Handoff
 
 **Last updated:** 2026-05-18  
-**Status:** Milestone 6 (partial) complete — 552 tests passing  
-**Next milestone:** Milestone 6 remainder — AI integration + remaining Tier 15 stubs (SubD, untrim, match, variable_fillet, surface_chamfer)
+**Status:** Milestone 7 (I/O) complete — 589 tests passing  
+**Next milestone:** Milestone 8 — AI integration (image-to-script pipeline)
 
 This document is the single source of truth for picking up development in a new session. Read it top-to-bottom before touching any code.
 
@@ -85,6 +85,7 @@ partikus/
 │   ├── tier15b_subd.py                  # all stubs — no FreeCAD 1.1.1 SubD support
 │   ├── tier15c_conversion.py            # mesh_to_nurbs (real); SubD conversions stubbed
 │   ├── tier15d_analysis.py              # curvature/draft/deviation (real); zebra/reflection stubbed
+│   ├── io.py                            # export (STEP/STL/IGES/BREP/OBJ/FCStd) + import (STEP/BREP/STL)
 │   └── gui/
 │       ├── auto_dialog.py
 │       └── workbench.py
@@ -207,9 +208,23 @@ Anchor names are string constants in `core/anchors.py`. Every shape guarantees a
   - `untrim_surface`, `match_surfaces`, `variable_fillet`, `surface_chamfer` remain stubs — BRep editing APIs not exposed in FreeCAD 1.x Python
 - 20 new tests → **552 total, all passing**
 
+### Milestone 7 (2026-05-18)
+
+- `partikus/io.py` — full export/import module:
+  - Export: `to_step`, `to_stl`, `to_iges`, `to_brep`, `to_obj`, `save_fcstd`
+  - Import: `from_step`, `from_brep`, `from_stl`
+  - All functions accept PartikusShape, list of PartikusShape, or list of (PartikusShape, label) tuples
+  - All auto-create parent directories
+- Key discoveries:
+  - `Part.export([shape], file)` produces STEP that `Part.read()` cannot parse back; single exports must use `shape.exportStep(file)`
+  - `shape.exportStl()` ignores deflection; use `Mesh.Mesh(shape.tessellate(deflection)).write()` instead
+  - `Part.read()` works for STEP and BREP via the same API call
+  - FreeCAD sphere tessellation has a minimum ~8000 facets regardless of deflection until < 0.05 mm
+- 37 new tests → **589 total, all passing**
+
 ---
 
-## 6. What to Build Next — Milestone 6 Remainder
+## 6. What to Build Next — Milestone 8
 
 Remaining stubs in Tier 15:
 
@@ -223,7 +238,7 @@ Remaining stubs in Tier 15:
 | `subd_to_nurbs`, `nurbs_to_subd`, `mesh_to_subd` | `tier15c_conversion.py` | Requires SubD support |
 | `analyze_zebra`, `analyze_reflection` | `tier15d_analysis.py` | Requires rendering pipeline |
 
-Milestone 6 also covers AI integration (separate project — image-to-script pipeline). Start only after explicit user confirmation.
+Milestone 8 covers AI integration (separate project — image-to-script pipeline). Start only after explicit user confirmation.
 
 ### Adding a new tier — checklist
 

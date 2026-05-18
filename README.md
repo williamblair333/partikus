@@ -2,7 +2,7 @@
 
 > **A parametric CAD toolkit for FreeCAD. Every part has its place.**
 
-[![Tests](https://img.shields.io/badge/tests-552%20passing-brightgreen)](#testing)
+[![Tests](https://img.shields.io/badge/tests-589%20passing-brightgreen)](#testing)
 [![Python](https://img.shields.io/badge/python-3.11-blue)](https://www.python.org/)
 [![FreeCAD](https://img.shields.io/badge/FreeCAD-1.1.1-orange)](https://www.freecad.org/)
 [![License](https://img.shields.io/badge/license-LGPL--2.1-lightgrey)](LICENSE)
@@ -617,7 +617,7 @@ All dimensions are **mm** unless the parameter name carries a suffix.
 ## Testing
 
 ```bash
-# Full test suite (552 tests, all tiers)
+# Full test suite (589 tests, all tiers)
 squashfs-root/usr/bin/freecadcmd tests/run_tests.py
 
 # Single module
@@ -646,8 +646,9 @@ squashfs-root/usr/bin/freecadcmd tests/test_tier15.py
 | 8 | `test_tier08.py` | electronics mounting |
 | 13 | `test_tier13.py` | architectural elements |
 | 15 | `test_tier15.py` | NURBS curves + surfaces + analysis |
+| I/O | `test_io.py` | export/import (STEP/STL/IGES/BREP/OBJ/FCStd) |
 
-**Total: 552 tests — 552 passing**
+**Total: 589 tests — 589 passing**
 
 ---
 
@@ -683,10 +684,11 @@ partikus/
 │   ├── tier12_sweep_loft.py             # extrude/revolve/sweep/loft/pipe
 │   ├── tier13_architectural.py          # wall/stairs/roof/column/beam/slab/truss
 │   ├── tier14_assembly.py               # translate/rotate/attach/…
-│   ├── tier15a_nurbs.py                 # NURBS/B-spline curves (surfaces stubbed)
+│   ├── tier15a_nurbs.py                 # NURBS curves + surfaces + editing
 │   ├── tier15b_subd.py                  # SubD stubs — no FreeCAD 1.1.1 native SubD
 │   ├── tier15c_conversion.py            # mesh_to_nurbs (real); SubD conversions stubbed
 │   ├── tier15d_analysis.py              # curvature/draft/deviation (real); zebra/reflection stubbed
+│   ├── io.py                            # export/import: STEP/STL/IGES/BREP/OBJ/FCStd
 │   └── gui/
 │       ├── auto_dialog.py               # introspection-based PySide2 dialog builder
 │       └── workbench.py                 # FreeCAD workbench registration
@@ -698,6 +700,7 @@ partikus/
 │   ├── test_tier07.py  test_tier08.py
 │   ├── test_tier09.py  test_tier10.py  test_tier11.py  test_tier12.py
 │   ├── test_tier13.py  test_tier14.py  test_tier15.py
+│   ├── test_io.py
 └── examples/
     └── capped_cylinder.py
 ```
@@ -738,13 +741,18 @@ Milestone 5 ✅  Freeform Surfaces
              zebra/reflection stubs remain
   532 tests — all passing
 
-Milestone 6 ✅  Surface Editing Operations  ← current
+Milestone 6 ✅  Surface Editing Operations
   Tier 15A — network_surface, sweep_2rail, trim_surface, split_surface, surface_fillet
              (untrim, match_surfaces, variable_fillet, surface_chamfer remain stubbed —
               BRep editing APIs not in FreeCAD 1.x Python)
   552 tests — all passing
 
-Milestone 7 ⬜  AI Integration (separate project)
+Milestone 7 ✅  I/O — Export and Import  ← current
+  partikus/io.py — to_step, to_stl, to_iges, to_brep, to_obj, save_fcstd
+                   from_step, from_brep, from_stl
+  37 new tests — 589 total, all passing
+
+Milestone 8 ⬜  AI Integration (separate project)
   Image → decomposition → toolkit call sequence
   Rendered feedback loop for dimension iteration
   Provenance metadata on all AI-generated objects

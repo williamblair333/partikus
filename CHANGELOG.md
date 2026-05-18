@@ -13,6 +13,40 @@ Versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
 
+## [0.7.0] — 2026-05-18 — I/O Module: Export and Import
+
+### Added
+
+**`partikus/io.py`** — new I/O module for reading and writing shapes
+
+Export:
+- `to_step(shapes, filename)` — STEP export; single shape uses `exportStep()` (round-trippable); multi-shape uses `Part.export()`
+- `to_stl(shapes, filename, deflection=0.1)` — STL via `Mesh.Mesh(raw.tessellate(deflection))`; multi-shape fused into compound first
+- `to_iges(shapes, filename)` — IGES export; single or compound
+- `to_brep(shape, filename)` — OpenCASCADE BREP (lossless round-trip)
+- `to_obj(shape, filename, deflection=0.1)` — Wavefront OBJ via mesh tessellation
+- `save_fcstd(shapes, filename, doc_name="Partikus")` — FreeCAD .FCStd project file with each shape as a labelled `Part::Feature`
+
+Import:
+- `from_step(filename)` → PartikusShape — `Part.read()` with FileNotFoundError + validity check
+- `from_brep(filename)` → PartikusShape — lossless round-trip counterpart to `to_brep`
+- `from_stl(filename, tolerance=0.1)` → PartikusShape — `Mesh.read()` → `makeShapeFromMesh()` → Shell
+
+All functions accept flexible `shapes` input: single PartikusShape, list of PartikusShape, or list of `(PartikusShape, label)` tuples. All auto-create parent directories.
+
+### Key discoveries
+
+- `Part.export([shape], file)` writes a STEP format that `Part.read()` cannot parse back (NULL shape). Single-shape export must use `shape.exportStep(file)`.
+- `shape.exportStl()` ignores deflection; use `Mesh.Mesh(shape.tessellate(deflection)).write()` instead.
+- FreeCAD sphere tessellation clamps to a minimum of ~8000 facets regardless of deflection until very small values (< 0.05 mm).
+
+### Tests
+
+- 37 new tests in `tests/test_io.py` covering all export/import functions, round-trip validity, volume preservation, missing-file errors, nested directory creation, multi-shape inputs
+- **589 total tests — all passing**
+
+---
+
 ## [0.6.0] — 2026-05-18 — Milestone 6: Surface Editing Operations
 
 ### Added
@@ -326,7 +360,8 @@ Versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
 
-[Unreleased]: https://github.com/williamblair333/partikus/compare/v0.6.0...HEAD
+[Unreleased]: https://github.com/williamblair333/partikus/compare/v0.7.0...HEAD
+[0.7.0]: https://github.com/williamblair333/partikus/compare/v0.6.0...v0.7.0
 [0.6.0]: https://github.com/williamblair333/partikus/compare/v0.5.0...v0.6.0
 [0.5.0]: https://github.com/williamblair333/partikus/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/williamblair333/partikus/compare/v0.3.0...v0.4.0
