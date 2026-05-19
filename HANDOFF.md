@@ -1,7 +1,7 @@
 # Partikus — Developer Handoff
 
 **Last updated:** 2026-05-18  
-**Status:** Milestones 1–13 complete — 704 tests passing  
+**Status:** Milestones 1–13 complete — 704 tests passing — showcase example added  
 **Next milestone:** Visual regression tests / BRep-stub workarounds / new tier
 
 This document is the single source of truth for picking up development in a new session. Read it top-to-bottom before touching any code.
@@ -112,7 +112,8 @@ partikus/
 │   ├── test_serialise.py                # anchor save/load round-trip tests
 │   └── test_subd.py                     # Catmull-Clark + SubD op tests
 └── examples/
-    └── capped_cylinder.py
+    ├── capped_cylinder.py
+    └── rpi4_enclosure.py            # full-API showcase (see docs/rpi4_enclosure_walkthrough.md)
 ```
 
 4 Tier 15A BRep-editing functions are **stubbed** — raise `NotImplementedError`. Blocked on missing FreeCAD 1.1.1 API surface. Everything else is implemented.
@@ -245,6 +246,15 @@ See `CHANGELOG.md [0.9.0]` and `[0.10.0]` for full details.
 - **M11 — CI integration runner**: `tests/run_integration_tests.py` — standalone AI pipeline test suite (requires `ANTHROPIC_API_KEY`).
 - **M12 — SubD** (pure-Python Catmull-Clark): `subd_mesh.py` + all 11 `tier15b_subd.py` functions real. `tier15c_conversion.py` conversions real. `analyze_zebra`/`analyze_reflection` numerical. 61 tests.
 - **M13 — Visual renderer**: `core/render.py` stdlib PNG writer. `analyze_zebra` and `analyze_reflection` now produce real PNG images via UV-grid sampling + stripe mapping. No GUI, no display required. 7 tests.
+
+### Showcase example (2026-05-18)
+
+- `examples/rpi4_enclosure.py` — single runnable script demonstrating Tiers 2, 4, 7, 8, 9, 10, 11, 14, 15A, 15D, I/O, and AI pipeline in a realistic Raspberry Pi 4B enclosure design.
+- `docs/rpi4_enclosure_walkthrough.md` — companion doc covering every section, the cutout-through-wall pattern, anchor-based positioning, and a parameters table for experimenting.
+- Key implementation notes captured there:
+  - `shell(rounded_box(...))` is untested — use `hollow_box` for enclosure bodies; call `shell()` directly only on plain `box()` shapes
+  - Cutout-through-wall: rotate cutout 90° to align its depth axis with the target wall, then translate centre to the wall face; use `CUT_D = WALL * 6` for safe overlap
+  - `analyze_zebra` requires a `Part.Face` with an underlying `BSplineSurface` (output of `surface_from_points`, `rebuild_surface`, etc.) — not a solid
 
 ### Milestone 8 (2026-05-18)
 
