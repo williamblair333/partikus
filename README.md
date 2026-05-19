@@ -2,11 +2,11 @@
 
 > **A parametric CAD toolkit for FreeCAD. Every part has its place.**
 
-[![Tests](https://img.shields.io/badge/tests-697%20passing-brightgreen)](#testing)
+[![Tests](https://img.shields.io/badge/tests-704%20passing-brightgreen)](#testing)
 [![Python](https://img.shields.io/badge/python-3.11-blue)](https://www.python.org/)
 [![FreeCAD](https://img.shields.io/badge/FreeCAD-1.1.1-orange)](https://www.freecad.org/)
 [![License](https://img.shields.io/badge/license-LGPL--2.1-lightgrey)](LICENSE)
-[![Milestone](https://img.shields.io/badge/milestone-12%20complete-brightgreen)](#roadmap)
+[![Milestone](https://img.shields.io/badge/milestone-13%20complete-brightgreen)](#roadmap)
 
 ---
 
@@ -27,6 +27,7 @@ The architecture is built for three audiences at once:
 ## Table of Contents
 
 - [Quick Start](#quick-start)
+- [Examples](#examples)
 - [Architecture Overview](#architecture-overview)
 - [Tier Reference](#tier-reference)
   - [Tier 0 — Foundations](#tier-0--foundations)
@@ -106,6 +107,40 @@ from partikus import rounded_rectangle, extrude
 profile = rounded_rectangle(30, 20, fillet_radius=3)
 solid   = extrude(profile, height=8)
 ```
+
+---
+
+## Examples
+
+### `examples/rpi4_enclosure.py` — full-API showcase
+
+A single runnable script that builds a parametric Raspberry Pi 4B enclosure and exercises
+every major feature of the library:
+
+| Section | Tiers | What it shows |
+|---|---|---|
+| Body shell | 2 + 10 | `hollow_box`, `shell` (cable guide trough) |
+| Connector openings | 7 + 8 + 9 | `usb_cutout`, `hdmi_cutout`, `vent_slots`, `button_cutout`, `slot_hole`, `difference` |
+| Internal features | 4 + 8 + 10 + 11 | `raspberry_pi_mount`, `boss` + `fillet`, `grid_array`, `rib` + `linear_array`, `gusset` |
+| Lid | 7 + 4 + 9 | `lid`, `vent_slots`, `snap_clip`, `difference` |
+| NURBS surfaces | 2 + 15A | `rounded_box`, `surface_from_points`, `bspline_curve` |
+| Surface analysis | 15D | `analyze_draft`, `analyze_zebra` → PNG |
+| Assembly | 14 | `stack_on`, `translate`, `rotate` |
+| Export | I/O | `to_step`, `to_stl`, `save_fcstd` |
+| AI pipeline | AI | `generate_script` (key-guarded) |
+
+```bash
+cd /opt/proj/partikus
+squashfs-root/usr/bin/freecadcmd examples/rpi4_enclosure.py
+# output → examples/out/
+```
+
+See **[docs/rpi4_enclosure_walkthrough.md](docs/rpi4_enclosure_walkthrough.md)** for a
+section-by-section explanation of every design pattern used.
+
+### `examples/capped_cylinder.py` — minimal intro
+
+A hollow cylinder with a snap-fit cap. Good first read before the enclosure example.
 
 ---
 
@@ -824,7 +859,7 @@ squashfs-root/usr/bin/freecadcmd tests/run_integration_tests.py
 | Serialise | `test_serialise.py` | `save_to_doc` / `load_from_doc` anchor round-trips |
 | SubD | `test_subd.py` | SubDMesh engine, all `subd_*` functions, conversions, analysis |
 
-**Total: 697 tests — 697 passing**
+**Total: 704 tests — 704 passing**
 
 ---
 
@@ -889,7 +924,8 @@ partikus/
 │   ├── test_serialise.py                # anchor serialisation round-trip tests
 │   └── test_subd.py                     # SubDMesh + subd_* + conversion + analysis tests
 └── examples/
-    └── capped_cylinder.py
+    ├── capped_cylinder.py               # minimal intro example
+    └── rpi4_enclosure.py                # full-API showcase
 ```
 
 ---
@@ -959,15 +995,29 @@ Milestone 11 ✅  CI Integration Tests
   tests/run_integration_tests.py — 7 end-to-end AI tests
   Exits cleanly with error if ANTHROPIC_API_KEY is unset
 
-Milestone 12 ✅  Tier 15B SubD — pure-Python Catmull-Clark  ← current
+Milestone 12 ✅  Tier 15B SubD — pure-Python Catmull-Clark
   partikus/subd_mesh.py — SubDMesh, cube/sphere/cylinder/cone/torus primitives,
     full Catmull-Clark subdivision, semi-sharp creases, soft-select, sculpt brushes,
     symmetry, edge loops, bevel, bridge, to_partikus_shape
   tier15b_subd.py — all 11 subd_* functions real (no stubs)
   tier15c_conversion.py — mesh_to_subd, nurbs_to_subd, subd_to_nurbs real
   tier15d_analysis.py — analyze_zebra, analyze_reflection numerical (software-based)
-  72 new tests in test_subd.py
-  697 total tests — all passing
+  72 new tests in test_subd.py — 697 total tests
+
+Milestone 13 ✅  Visual PNG renderer  ← current
+  core/render.py — pure-stdlib PNG writer (no GUI, no display required)
+  analyze_zebra / analyze_reflection — now produce real stripe-map PNG images
+    via UV-grid sampling + Gaussian-weighted stripe blending
+  7 new tests — 704 total tests, all passing
+
+Showcase example ✅  examples/rpi4_enclosure.py
+  Single runnable script exercising Tiers 2, 4, 7, 8, 9, 10, 11, 14, 15A, 15D,
+  I/O, and AI pipeline.  Companion: docs/rpi4_enclosure_walkthrough.md
+
+Next
+  Visual regression tests — render reference shapes; detect drift on re-render
+  Expand AI system prompt — subd_* / analyze_zebra not yet in the AI prompt
+  New tier (16) — domain-specific: jewellery, robotics, sheet metal
 ```
 
 ---
