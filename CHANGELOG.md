@@ -26,6 +26,14 @@ Versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   the four stubs are never offered, `_ASSEMBLY_OPS ⊆ _ALLOWED_FUNCTIONS`, and specialised
   builders get imported when used. 6 new tests → **717 total, all passing**.
 
+**Repo hosting → Gitea** (2026-08-07)
+- Primary remote is now self-hosted Gitea (`http://10.0.0.100:3000/bill/partikus`);
+  `origin` → Gitea, `github` → GitHub (`williamblair333/partikus`), `remote.pushDefault=origin`.
+  Plain `git push` now targets Gitea. GitHub is retained as a secondary/mirror.
+- Context: GitHub `origin/main` had been force-rewound to `f2dc1d0`, dropping the merged
+  PR #1 work (visual regression + AI-prompt whitelist). Local `main` retained all 7 commits
+  and is the source of truth; those commits are re-published to Gitea as the new mainline.
+
 ### Added
 
 **Visual regression tests** (`tests/test_visual_regression.py`, `tests/baselines/`)

@@ -4,6 +4,8 @@
 **Status:** Milestones 1–13 complete + visual regression suite + AI-prompt expansion — 717 tests passing — showcase example added  
 **Next milestone:** New tier / BRep-stub workarounds (when FreeCAD exposes the APIs)
 
+**Repo hosting:** Primary remote is self-hosted **Gitea** — `origin` = `http://10.0.0.100:3000/bill/partikus`, `remote.pushDefault=origin`. GitHub (`github` remote → `williamblair333/partikus`) is secondary/mirror. Plain `git push` goes to Gitea. Note: GitHub `main` was force-rewound to `f2dc1d0` on 2026-08-07 (dropped PR #1); local/Gitea `main` is the source of truth.
+
 This document is the single source of truth for picking up development in a new session. Read it top-to-bottom before touching any code.
 
 ---
