@@ -8,23 +8,57 @@ all shapes, assembles them, and (optionally) exports the result.
 import ast
 
 
+# Every name here must be a callable export of `partikus` that returns a
+# PartikusShape (a shape constructor) or transforms/combines shapes (an
+# assembly op). generate() only *imports* names found in this set, so a
+# function the model uses that is missing here produces a NameError at
+# runtime. Deliberately excluded: analysis functions (analyze_*, which
+# return dicts/PNGs, not shapes), SubD/mesh ops (subd_*, *_to_nurbs,
+# mesh_to_*), 2D profiles (return wires), and the four Tier 15A stubs
+# (untrim_surface, match_surfaces, variable_fillet, surface_chamfer).
 _ALLOWED_FUNCTIONS = {
     # Tier 1 — primitives
     "box", "cylinder", "sphere", "cone", "torus", "wedge", "pyramid", "disk",
-    # Tier 2 — enhanced
-    "rounded_box", "chamfered_box", "rounded_cylinder", "tube", "hollow_box",
-    "hemisphere", "spherical_cap", "frustum", "prism", "rounded_prism",
-    "stepped_cylinder",
+    # Tier 2 — enhanced primitives
+    "rounded_box", "chamfered_box", "rounded_cylinder", "tube", "tube_by_wall",
+    "hollow_box", "hemisphere", "spherical_cap", "frustum", "prism",
+    "rounded_prism", "stepped_cylinder",
+    # Tier 4 — mechanical features
+    "boss", "counterbore_hole", "countersink_hole", "slot_hole", "keyway",
+    "rib", "gusset", "flange", "lip", "l_bracket", "t_bracket", "u_bracket",
+    "tab", "slot_cutout", "dovetail_pin", "dovetail_slot", "tongue", "groove",
+    "living_hinge", "snap_clip",
+    # Tier 5 — fasteners
+    "threaded_rod", "tapped_hole", "hex_bolt", "socket_head_bolt",
+    "button_head_bolt", "flat_head_bolt", "hex_nut", "flat_washer",
+    "lock_washer", "heat_set_insert_pocket", "clearance_hole", "standoff",
+    "dowel_pin",
+    # Tier 6 — mechanical components
+    "spur_gear", "bevel_gear", "rack", "pulley_timing", "sprocket",
+    "bearing_pocket", "shaft_coupling",
+    # Tier 7 — enclosures
+    "lid", "snap_fit_box", "hinged_box", "magnetic_recess",
+    "battery_compartment", "cable_channel", "strain_relief", "vent_slots",
+    "display_window", "button_cutout",
+    # Tier 8 — electronics
+    "pcb_standoff", "raspberry_pi_mount", "arduino_mount", "led_holder",
+    "usb_cutout", "hdmi_cutout", "barrel_jack_cutout", "din_rail_clip",
+    "heatsink_fin_array",
     # Tier 9 — boolean
-    "union", "difference", "intersection",
+    "union", "difference", "intersection", "fuse", "cut", "intersect",
     # Tier 10 — modifiers
     "fillet", "chamfer", "shell", "offset",
+    # Tier 11 — patterns
+    "linear_array", "grid_array", "polar_array", "mirror",
     # Tier 12 — sweep / loft
     "extrude", "revolve", "sweep", "loft", "pipe",
+    # Tier 13 — architectural
+    "wall", "door", "window", "stairs", "roof_gable", "roof_hip", "roof_shed",
+    "column", "beam", "slab", "truss_simple",
     # Tier 14 — assembly
-    "translate", "rotate", "scale", "mirror",
+    "translate", "rotate", "scale", "mirror_position",
     "attach", "stack_on", "place_beside", "align", "coaxial",
-    # Tier 15 — NURBS / surfaces
+    # Tier 15 — NURBS curves + surfaces
     "nurbs_curve", "bspline_curve", "bezier_curve",
     "loft_surface", "sweep_1rail",
 }

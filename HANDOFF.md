@@ -1,8 +1,8 @@
 # Partikus — Developer Handoff
 
 **Last updated:** 2026-08-07  
-**Status:** Milestones 1–13 complete + visual regression suite — 711 tests passing — showcase example added  
-**Next milestone:** AI-prompt expansion (zebra/reflection/subd) / BRep-stub workarounds / new tier
+**Status:** Milestones 1–13 complete + visual regression suite + AI-prompt expansion — 717 tests passing — showcase example added  
+**Next milestone:** New tier / BRep-stub workarounds (when FreeCAD exposes the APIs)
 
 This document is the single source of truth for picking up development in a new session. Read it top-to-bottom before touching any code.
 
@@ -304,7 +304,7 @@ These four are genuinely blocked — no workaround exists in FreeCAD 1.x Python.
 Candidate next steps (no hard blockers):
 
 1. ~~**Visual regression tests**~~ — DONE (2026-08-07). `tests/test_visual_regression.py` renders a flat grid + Gaussian dome through `analyze_zebra`/`analyze_reflection`, compares PNGs pixel-for-pixel against committed baselines in `tests/baselines/`. Recapture with `PARTIKUS_UPDATE_BASELINES=1`.
-2. **Expand AI system prompt** — `analyze_zebra` / `analyze_reflection` / `subd_*` functions not yet in the AI prompt; add them
+2. ~~**Expand AI system prompt**~~ — DONE (2026-08-07), but scoped differently than originally worded. The AI pipeline decomposes an object into **shape constructors + assembly ops** producing a final `PartikusShape`. `analyze_zebra`/`analyze_reflection` return analysis dicts/PNGs (not shapes) and `subd_*` operate on `SubDMesh` (not the shape/assembly schema) — adding them would generate broken scripts, so they're **deliberately excluded**. Instead the prompt catalogue + `_ALLOWED_FUNCTIONS` grew from ~20 to ~90 real constructive functions (Tiers 1–14: fasteners, gears, enclosures, electronics, mechanical features, patterns, architectural). Guard tests in `test_ai.py` enforce prompt ⊆ whitelist ⊆ real callable exports, and that the 4 Tier-15A stubs are never offered. To surface analysis/SubD to the AI later, add a separate post-processing schema slot — don't put them in `shapes`/`assembly`.
 3. **New tier** — Tier 16 or domain-specific (e.g., jewellery, robotics, sheet metal)
 
 ### Adding a new tier — checklist
@@ -479,11 +479,11 @@ Expected output:
 
 ```
 ============================================================
-  711 passed  |  0 failed
+  717 passed  |  0 failed
 ```
 
 If anything is failing, fix it before adding new code.
 
 ---
 
-*End of handoff. Milestones 1–13 complete + visual regression suite. 711 tests passing. Next: AI prompt expansion, or new tier.*
+*End of handoff. Milestones 1–13 complete + visual regression suite + AI-prompt expansion. 717 tests passing. Next: new tier, or BRep-stub workarounds when FreeCAD exposes the APIs.*

@@ -4,11 +4,19 @@ Tests for partikus.ai — AI integration module.
 Most tests use mock data so they run without an ANTHROPIC_API_KEY.
 Integration tests (test_integration_*) are skipped when the key is absent.
 """
-import sys, os, json, tempfile
+import sys, os, json, re, tempfile
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from partikus.ai.generator import ScriptGenerator, validate_syntax, _safe_id, _format_params
-from partikus.ai.analyzer  import _extract_json, _validate_analysis, ImageAnalyzer
+import partikus
+from partikus.ai.generator import (
+    ScriptGenerator, validate_syntax, _safe_id, _format_params,
+    _ALLOWED_FUNCTIONS, _ASSEMBLY_OPS,
+)
+from partikus.ai.analyzer  import _extract_json, _validate_analysis, ImageAnalyzer, _SYSTEM_PROMPT
+
+# Tier 15A BRep-editing stubs — must never be offered to the AI (they raise
+# NotImplementedError, so any generated script using them fails at runtime).
+_KNOWN_STUBS = {"untrim_surface", "match_surfaces", "variable_fillet", "surface_chamfer"}
 
 # ── Helpers ────────────────────────────────────────────────────────────────────
 
@@ -22,6 +30,58 @@ def _make_analysis(description="a box", shapes=None, assembly=None, final="body"
         "final": final,
         "estimated_dimensions_mm": {"x": 80, "y": 50, "z": 30},
     }
+
+
+# ── prompt ↔ whitelist ↔ exports consistency ────────────────────────────────────
+# These guard the failure mode where the AI is told about a function that either
+# does not exist, is a stub, or is not imported by the generator (→ NameError in
+# the generated script).
+
+def test_allowed_functions_are_real_callable_exports():
+    missing = [fn for fn in _ALLOWED_FUNCTIONS
+               if not callable(getattr(partikus, fn, None))]
+    assert not missing, f"_ALLOWED_FUNCTIONS names not exported/callable: {missing}"
+
+def test_stubs_never_in_allowed_functions():
+    leaked = _KNOWN_STUBS & _ALLOWED_FUNCTIONS
+    assert not leaked, f"stub functions must not be offered to the AI: {leaked}"
+
+def test_assembly_ops_subset_of_allowed():
+    extra = _ASSEMBLY_OPS - _ALLOWED_FUNCTIONS
+    assert not extra, f"_ASSEMBLY_OPS not in _ALLOWED_FUNCTIONS (won't import): {extra}"
+
+def _prompt_referenced_functions():
+    # Grab every "name(" that starts a reference line in the function catalogue.
+    names = set()
+    for line in _SYSTEM_PROMPT.splitlines():
+        m = re.match(r"([a-z_][a-z0-9_]*)\(", line)
+        if m:
+            names.add(m.group(1))
+    return names
+
+def test_prompt_functions_are_all_allowed():
+    referenced = _prompt_referenced_functions()
+    assert referenced, "prompt catalogue parsed to zero functions — regex drift?"
+    unlisted = referenced - _ALLOWED_FUNCTIONS
+    assert not unlisted, f"prompt lists functions absent from _ALLOWED_FUNCTIONS: {unlisted}"
+
+def test_prompt_functions_are_real_exports():
+    unreal = [fn for fn in _prompt_referenced_functions()
+              if not callable(getattr(partikus, fn, None))]
+    assert not unreal, f"prompt lists non-existent/non-callable functions: {unreal}"
+
+def test_generate_imports_specialised_function():
+    # A specialised builder the model may now emit must be imported, not just called.
+    analysis = _make_analysis(shapes=[
+        {"id": "bolt", "function": "hex_bolt", "params": {"diameter": 8, "length": 30}}
+    ], final="bolt")
+    script = ScriptGenerator().generate(analysis)
+    assert "hex_bolt" in script
+    # the import block precedes the shape section — ensure it's imported
+    import_block = script.split("# --- Shapes ---")[0]
+    assert "hex_bolt" in import_block, "hex_bolt used but not imported (NameError at runtime)"
+    ok, err = validate_syntax(script)
+    assert ok, err
 
 
 # ── _safe_id ───────────────────────────────────────────────────────────────────

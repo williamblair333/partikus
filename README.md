@@ -2,7 +2,7 @@
 
 > **A parametric CAD toolkit for FreeCAD. Every part has its place.**
 
-[![Tests](https://img.shields.io/badge/tests-711%20passing-brightgreen)](#testing)
+[![Tests](https://img.shields.io/badge/tests-717%20passing-brightgreen)](#testing)
 [![Python](https://img.shields.io/badge/python-3.11-blue)](https://www.python.org/)
 [![FreeCAD](https://img.shields.io/badge/FreeCAD-1.1.1-orange)](https://www.freecad.org/)
 [![License](https://img.shields.io/badge/license-LGPL--2.1-lightgrey)](LICENSE)
@@ -871,7 +871,7 @@ squashfs-root/usr/bin/freecadcmd tests/run_integration_tests.py
 | SubD | `test_subd.py` | SubDMesh engine, all `subd_*` functions, conversions, analysis |
 | Visual | `test_visual_regression.py` | zebra/reflection PNG output vs committed baselines |
 
-**Total: 711 tests — 711 passing**
+**Total: 717 tests — 717 passing**
 
 ---
 
