@@ -9,7 +9,37 @@ Versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
-*Changes staged for the next release go here.*
+### Changed
+
+**AI prompt + generator whitelist expansion** (`partikus/ai/analyzer.py`, `partikus/ai/generator.py`)
+- `_SYSTEM_PROMPT` function catalogue grown from ~20 primitives to ~90 constructive
+  functions across Tiers 1–14 (fasteners, gears, enclosures, electronics, mechanical
+  features, patterns, architectural), each with its correct signature. Fixed the wrong
+  `tube(...)` signature (now `tube(outer_diameter, inner_diameter, height)`).
+- `_ALLOWED_FUNCTIONS` expanded to match — a name in the prompt but absent here would
+  otherwise produce a `NameError` in the generated script (generator only imports
+  whitelisted names).
+- Deliberately excluded from the AI surface: `analyze_*` (return analysis dicts/PNGs,
+  not shapes), `subd_*`/mesh conversions (operate on meshes, not the shape/assembly
+  schema), 2D profiles (return wires), and the four Tier 15A stubs.
+- New guard tests: every whitelist/prompt name is a real callable `partikus` export,
+  the four stubs are never offered, `_ASSEMBLY_OPS ⊆ _ALLOWED_FUNCTIONS`, and specialised
+  builders get imported when used. 6 new tests → **717 total, all passing**.
+
+### Added
+
+**Visual regression tests** (`tests/test_visual_regression.py`, `tests/baselines/`)
+- Renders deterministic reference surfaces (a flat grid and a smooth Gaussian dome) through
+  `analyze_zebra` / `analyze_reflection` and compares the PNG output, pixel-for-pixel, against
+  committed baseline images in `tests/baselines/`.
+- Comparison decodes both PNGs to RGB pixels (via a minimal built-in PNG decoder) and diffs
+  them — robust to zlib-version differences in the compressed byte stream; drift is reported
+  as a pixel count plus the first differing coordinate.
+- Also guards renderer determinism (same input → identical bytes) and stripe contrast on
+  curved surfaces.
+- Baselines auto-capture on first run when missing; regenerate intentionally after a renderer
+  change with `PARTIKUS_UPDATE_BASELINES=1`.
+- 7 new tests → **711 total, all passing**.
 
 ---
 
