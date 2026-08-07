@@ -13,6 +13,9 @@ build/
 *.FCStd1
 *.FCBak
 
+# Generated example output (STEP/STL/FCStd/PNG artifacts)
+examples/out/
+
 # AppImage / extracted filesystem
 *.AppImage
 squashfs-root/

@@ -32,10 +32,16 @@ The architecture is API-first. Dialogs call the same functions an AI would call.
 | freecadcmd | `squashfs-root/usr/bin/freecadcmd` (relative to working dir) |
 | Working directory | `/opt/proj/partikus/` |
 
-### Running scripts
+### First-time setup
 
 ```bash
 cd /opt/proj/partikus
+./install.sh   # detects system freecadcmd >= 1.1, or extracts the AppImage automatically
+```
+
+### Running scripts
+
+```bash
 squashfs-root/usr/bin/freecadcmd tests/run_tests.py
 squashfs-root/usr/bin/freecadcmd my_script.py
 ```

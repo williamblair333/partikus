@@ -65,9 +65,14 @@ The architecture is built for three audiences at once:
 ### Headless / scripting
 
 ```bash
+# One-time setup — detects system FreeCAD or extracts the AppImage automatically
+./install.sh
+
 # Run any script via freecadcmd (no GUI required)
-/path/to/FreeCAD_1.1.1.AppImage/squashfs-root/usr/bin/freecadcmd my_script.py
+squashfs-root/usr/bin/freecadcmd my_script.py
 ```
+
+> **Manual alternative:** `chmod +x FreeCAD_1.1.1-Linux-x86_64-py311.AppImage && ./FreeCAD_1.1.1-Linux-x86_64-py311.AppImage --appimage-extract`
 
 ### Basic usage
 
@@ -130,9 +135,15 @@ every major feature of the library:
 | AI pipeline | AI | `generate_script` (key-guarded) |
 
 ```bash
+# Headless — no display required, outputs files to examples/out/
 cd /opt/proj/partikus
 squashfs-root/usr/bin/freecadcmd examples/rpi4_enclosure.py
-# output → examples/out/
+
+# Live GUI — watch it build step-by-step in FreeCAD's 3-D view
+PARTIKUS_GUI=1 squashfs-root/AppRun freecad examples/rpi4_enclosure.py
+
+# View result after a headless run
+squashfs-root/AppRun examples/out/rpi4_enclosure.FCStd
 ```
 
 See **[docs/rpi4_enclosure_walkthrough.md](docs/rpi4_enclosure_walkthrough.md)** for a
@@ -870,6 +881,8 @@ partikus/
 ├── README.md
 ├── CHANGELOG.md
 ├── HANDOFF.md
+├── install.sh                               # one-time setup: finds/extracts FreeCAD >= 1.1
+├── run_tests.sh                             # shortcut: runs full test suite via freecadcmd
 ├── partikus/
 │   ├── __init__.py                      # public API surface
 │   ├── core/

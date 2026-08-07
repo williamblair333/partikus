@@ -17,9 +17,15 @@ A single runnable script that demonstrates the full Partikus API:
 
 Companion walkthrough: docs/rpi4_enclosure_walkthrough.md
 
-Run (headless, no display required):
+Run headless (no display required):
     cd /opt/proj/partikus
     squashfs-root/usr/bin/freecadcmd examples/rpi4_enclosure.py
+
+Run with live GUI (watch it build step-by-step):
+    PARTIKUS_GUI=1 squashfs-root/AppRun freecad examples/rpi4_enclosure.py
+
+View result after a headless run:
+    squashfs-root/AppRun examples/out/rpi4_enclosure.FCStd
 
 Output files land in  examples/out/ :
     rpi4_body.step          rpi4_lid.step
@@ -64,7 +70,52 @@ from partikus.io import to_step, to_stl, save_fcstd
 
 
 def _log(msg):
+    if GUI_MODE:
+        try:
+            import FreeCAD as _FC2
+            _FC2.Console.PrintMessage(msg + "\n")
+            return
+        except Exception:
+            pass
     sys.stderr.write(msg + "\n")
+
+
+# ─── GUI mode ─────────────────────────────────────────────────────────────────
+GUI_MODE = os.environ.get("PARTIKUS_GUI") == "1"
+_fgui = None
+_fdoc = None
+
+if GUI_MODE:
+    try:
+        import FreeCADGui as _fgui
+        import FreeCAD as _FC
+        _fdoc = _FC.newDocument("rpi4_enclosure")
+        _log("[gui] GUI mode active — shapes appear in FreeCAD as each step runs")
+    except Exception as _e:
+        _log(f"[gui] FreeCADGui unavailable ({_e})")
+        _log("[gui] Tip: PARTIKUS_GUI=1 squashfs-root/AppRun freecad examples/rpi4_enclosure.py")
+        GUI_MODE = False
+        _fgui = None
+
+
+def _gui_show(shape, label):
+    """Add shape to the live FreeCAD document and refresh the 3-D view."""
+    if not GUI_MODE or _fgui is None or _fdoc is None:
+        return
+    raw = shape.shape if hasattr(shape, "shape") else shape
+    obj = _fdoc.addObject("Part::Feature", label.replace(" ", "_"))
+    obj.Shape = raw
+    _fdoc.recompute()
+    _fgui.updateGui()
+    try:
+        _fgui.ActiveDocument.ActiveView.fitAll()
+    except Exception:
+        pass
+    try:
+        from PySide2.QtWidgets import QApplication
+        QApplication.processEvents()
+    except Exception:
+        pass
 
 
 # ─── Parameters  (edit these to resize the enclosure) ────────────────────────
@@ -79,10 +130,12 @@ STANDOFF_H = 6.0     # PCB standoff height above inner floor
 
 # ─── Derived geometry constants ───────────────────────────────────────────────
 _z_floor  = -OUTER_H / 2 + WALL            # Z of inner floor surface
-_z_conn   = _z_floor + STANDOFF_H + 4.0   # approximate Z centreline of connectors
+_z_pcb    = _z_floor + STANDOFF_H + 1.6   # Z of the top PCB surface (floor + standoff + board)
 CUT_D     = WALL * 6                       # cutout depth — safely punches through any wall
 
 OUT_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "out")
+if _fdoc is not None:
+    _fdoc.FileName = os.path.join(OUT_DIR, "rpi4_enclosure_gui.FCStd")
 os.makedirs(OUT_DIR, exist_ok=True)
 
 
@@ -114,6 +167,8 @@ cable_guide = translate(cable_guide,
 _log(f"   body  valid={body_shell.shape.isValid()}"
      f"  vol={round(body_shell.shape.Volume, 0)} mm³")
 _log(f"   cable guide  valid={cable_guide.shape.isValid()}")
+_gui_show(body_shell, "Body_Shell")
+_gui_show(cable_guide, "Cable_Guide")
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -132,48 +187,70 @@ _log(f"   cable guide  valid={cable_guide.shape.isValid()}")
 # ══════════════════════════════════════════════════════════════════════════════
 _log("2 · Connector cutouts  [Tier 7 + Tier 8 + Tier 9] …")
 
-# Front wall (Y+): USB-C power + micro-HDMI  [Tier 8]
-# usb_cutout/hdmi_cutout depth is along X → rotate 90° around Z → depth along Y
-usbc = usb_cutout("USB-C",  panel_thickness=CUT_D, clearance=0.3)
+# ── FRONT wall (Y+): USB-C power, micro-HDMI × 2, 3.5 mm audio ───────────────
+# Positions from official RPi 4B DXF (RP-0082); board centred at X=0, Y=0.
+# enc_x = board_x_from_left_edge − 42.5   (board spans X: −42.5 → +42.5)
+# usb_cutout / hdmi_cutout depth along X → rotate 90° about Z → depth along +Y.
+
+usbc = usb_cutout("USB-C", panel_thickness=CUT_D, clearance=0.3)
 usbc = rotate(usbc, axis=(0, 0, 1), angle_deg=90)
-usbc = translate(usbc, dx=-20.0, dy=OUTER_W / 2, dz=_z_conn)
+usbc = translate(usbc, dx=-31.3, dy=OUTER_W / 2, dz=_z_pcb + 2.4)   # 11.2 mm from left
 
-mhdmi = hdmi_cutout("micro", panel_thickness=CUT_D, clearance=0.3)
-mhdmi = rotate(mhdmi, axis=(0, 0, 1), angle_deg=90)
-mhdmi = translate(mhdmi, dx=5.0, dy=OUTER_W / 2, dz=_z_conn)
+mhdmi0 = hdmi_cutout("micro", panel_thickness=CUT_D, clearance=0.3)
+mhdmi0 = rotate(mhdmi0, axis=(0, 0, 1), angle_deg=90)
+mhdmi0 = translate(mhdmi0, dx=-16.5, dy=OUTER_W / 2, dz=_z_pcb + 2.0) # 26.0 mm from left
 
-# Back wall (Y-): USB-A  [Tier 8]
-# rotate -90° around Z → depth along -Y
-usba = usb_cutout("USB-A",  panel_thickness=CUT_D, clearance=0.3)
-usba = rotate(usba, axis=(0, 0, 1), angle_deg=-90)
-usba = translate(usba, dx=8.0, dy=-OUTER_W / 2, dz=_z_conn + 3)
+mhdmi1 = hdmi_cutout("micro", panel_thickness=CUT_D, clearance=0.3)
+mhdmi1 = rotate(mhdmi1, axis=(0, 0, 1), angle_deg=90)
+mhdmi1 = translate(mhdmi1, dx=-3.0,  dy=OUTER_W / 2, dz=_z_pcb + 2.0) # 39.5 mm from left
 
-# Right wall (X+): GPIO ribbon-cable oblong slot  [Tier 4]
-# slot_hole depth is along Z → rotate 90° around Y → depth along X
-gpio_slot = slot_hole(length=28, width=8, depth=CUT_D)
-gpio_slot = rotate(gpio_slot, axis=(0, 1, 0), angle_deg=90)
-gpio_slot = translate(gpio_slot,
-                      dx=OUTER_L / 2,
-                      dz=_z_floor + STANDOFF_H + 5)
+# 3.5 mm audio / composite jack — round Ø 7.5 mm aperture  [Tier 7]
+# button_cutout depth along Z → rotate 90° about X → depth along +Y
+av_jack = button_cutout(diameter=7.5, panel_thickness=CUT_D, shape="round")
+av_jack = rotate(av_jack, axis=(1, 0, 0), angle_deg=90)
+av_jack = translate(av_jack, dx=11.5, dy=OUTER_W / 2, dz=_z_pcb + 6.0) # 54.0 mm from left
 
-# Left wall (X-): ventilation slots  [Tier 7]
-# vent_slots depth is along Z → rotate -90° around Y → depth along -X
+# ── RIGHT wall (X+): USB 2.0 × 2, USB 3.0 × 2, Gigabit Ethernet ─────────────
+# box(length, width, height): length=X, width=Y, height=Z.
+# box() centred at origin; depth (X = CUT_D) punches through the right wall.
+
+usb2_cut = box(CUT_D, 14.0, 15.6)
+usb2_cut = translate(usb2_cut, dx=OUTER_L / 2, dy=19.4,   dz=_z_pcb + 7.8)
+
+usb3_cut = box(CUT_D, 14.0, 15.6)
+usb3_cut = translate(usb3_cut, dx=OUTER_L / 2, dy=0.7,    dz=_z_pcb + 7.8)
+
+eth_cut  = box(CUT_D, 16.0, 16.0)
+eth_cut  = translate(eth_cut,  dx=OUTER_L / 2, dy=-17.75, dz=_z_pcb + 6.75)
+
+# ── BACK wall (Y-): GPIO 40-pin ribbon-cable slot  [Tier 4] ──────────────────
+# slot_hole: length along X (52 mm), width along Y (9 mm cross-section), depth along Z.
+# rotate 90° about X → depth along −Y (punches through the back wall).
+gpio_slot = slot_hole(length=52, width=9, depth=CUT_D)
+gpio_slot = rotate(gpio_slot, axis=(1, 0, 0), angle_deg=90)
+gpio_slot = translate(gpio_slot, dx=-10.0, dy=-OUTER_W / 2, dz=_z_pcb + 4.5)
+
+# ── LEFT wall (X-): ventilation slots  [Tier 7] ───────────────────────────────
+# vent_slots depth along Z → rotate −90° about Y → depth along −X
 side_vent = vent_slots(length=30, width=20, slot_count=4, slot_width=2.0,
                        depth=CUT_D, wall_thickness=1.0)
 side_vent = rotate(side_vent, axis=(0, 1, 0), angle_deg=-90)
 side_vent = translate(side_vent, dx=-OUTER_L / 2, dz=_z_floor + 14)
 
-# Status LED hole on front wall — shows button_cutout [Tier 7]
-# button_cutout depth is along Z → rotate around X → depth along Y
+# ── Status LED on front wall  [Tier 7] ────────────────────────────────────────
 led_wall = button_cutout(diameter=5.0, panel_thickness=CUT_D, shape="round")
 led_wall = rotate(led_wall, axis=(1, 0, 0), angle_deg=90)
-led_wall = translate(led_wall, dx=30.0, dy=OUTER_W / 2, dz=_z_conn + 8)
+led_wall = translate(led_wall, dx=28.0, dy=OUTER_W / 2, dz=_z_pcb + 14)
 
 # Subtract all openings at once  [Tier 9]
-body = difference(body_shell, usbc, mhdmi, usba, gpio_slot, side_vent, led_wall)
+body = difference(body_shell,
+                  usbc, mhdmi0, mhdmi1, av_jack,
+                  usb2_cut, usb3_cut, eth_cut,
+                  gpio_slot, side_vent, led_wall)
 
 _log(f"   body after cuts  valid={body.shape.isValid()}"
      f"  vol={round(body.shape.Volume, 0)} mm³")
+_gui_show(body, "Body_with_Cutouts")
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -225,6 +302,7 @@ gusset_corners = grid_array(_gusset_unit,
 internals = union(rpi_mount, boss_corners, rib_pair, gusset_corners, cable_guide)
 
 _log(f"   internals  vol={round(internals.shape.Volume, 0)} mm³")
+_gui_show(internals, "Internals")
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -271,6 +349,7 @@ lid_snaps = union(snap_front, snap_back)
 
 _log(f"   lid  valid={encl_lid.shape.isValid()}"
      f"  vol={round(encl_lid.shape.Volume, 0)} mm³")
+_gui_show(encl_lid, "Lid")
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -309,6 +388,9 @@ cable_arc = bspline_curve(arc_ctrl, degree=3)
 _log(f"   rounded_ref  valid={rounded_ref.shape.isValid()}")
 _log(f"   dome surface valid={dome_surf.shape.isValid()}")
 _log(f"   cable arc    valid={cable_arc.shape.isValid()}")
+_gui_show(rounded_ref, "Rounded_Ref")
+_gui_show(dome_surf,   "Dome_Surface")
+_gui_show(cable_arc,   "Cable_Arc")
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -359,6 +441,7 @@ snaps_positioned = translate(lid_snaps,
 
 _log(f"   body TOP     = {body.anchors[TOP]}")
 _log(f"   lid  BOTTOM  = {lid_seated.anchors[BOTTOM]}")
+_gui_show(lid_seated, "Assembly")
 
 
 # ══════════════════════════════════════════════════════════════════════════════
