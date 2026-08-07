@@ -36,6 +36,7 @@ _MODULES = [
     "tests.test_ai",
     "tests.test_serialise",
     "tests.test_subd",
+    "tests.test_visual_regression",
 ]
 
 

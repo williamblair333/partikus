@@ -1,8 +1,8 @@
 # Partikus — Developer Handoff
 
-**Last updated:** 2026-05-18  
-**Status:** Milestones 1–13 complete — 704 tests passing — showcase example added  
-**Next milestone:** Visual regression tests / BRep-stub workarounds / new tier
+**Last updated:** 2026-08-07  
+**Status:** Milestones 1–13 complete + visual regression suite — 711 tests passing — showcase example added  
+**Next milestone:** AI-prompt expansion (zebra/reflection/subd) / BRep-stub workarounds / new tier
 
 This document is the single source of truth for picking up development in a new session. Read it top-to-bottom before touching any code.
 
@@ -116,7 +116,9 @@ partikus/
 │   ├── test_io.py
 │   ├── test_ai.py
 │   ├── test_serialise.py                # anchor save/load round-trip tests
-│   └── test_subd.py                     # Catmull-Clark + SubD op tests
+│   ├── test_subd.py                     # Catmull-Clark + SubD op tests
+│   ├── test_visual_regression.py        # zebra/reflection PNG output vs baselines
+│   └── baselines/                       # committed reference PNGs for visual regression
 └── examples/
     ├── capped_cylinder.py
     └── rpi4_enclosure.py            # full-API showcase (see docs/rpi4_enclosure_walkthrough.md)
@@ -301,7 +303,7 @@ These four are genuinely blocked — no workaround exists in FreeCAD 1.x Python.
 
 Candidate next steps (no hard blockers):
 
-1. **Visual regression tests** — render reference shapes with `analyze_zebra`; store baseline PNGs; detect drift on re-render
+1. ~~**Visual regression tests**~~ — DONE (2026-08-07). `tests/test_visual_regression.py` renders a flat grid + Gaussian dome through `analyze_zebra`/`analyze_reflection`, compares PNGs pixel-for-pixel against committed baselines in `tests/baselines/`. Recapture with `PARTIKUS_UPDATE_BASELINES=1`.
 2. **Expand AI system prompt** — `analyze_zebra` / `analyze_reflection` / `subd_*` functions not yet in the AI prompt; add them
 3. **New tier** — Tier 16 or domain-specific (e.g., jewellery, robotics, sheet metal)
 
@@ -395,6 +397,9 @@ _MODULES = [
     "tests.test_tier15",
     "tests.test_io",
     "tests.test_ai",
+    "tests.test_serialise",
+    "tests.test_subd",
+    "tests.test_visual_regression",   # visual regression: zebra/reflection PNG baselines
 ]
 
 # Imports each module, finds test_* functions, calls them,
@@ -474,11 +479,11 @@ Expected output:
 
 ```
 ============================================================
-  704 passed  |  0 failed
+  711 passed  |  0 failed
 ```
 
 If anything is failing, fix it before adding new code.
 
 ---
 
-*End of handoff. Milestones 1–13 complete. 704 tests passing. Next: visual regression tests, AI prompt expansion, or new tier.*
+*End of handoff. Milestones 1–13 complete + visual regression suite. 711 tests passing. Next: AI prompt expansion, or new tier.*

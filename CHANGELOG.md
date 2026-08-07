@@ -9,7 +9,20 @@ Versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
-*Changes staged for the next release go here.*
+### Added
+
+**Visual regression tests** (`tests/test_visual_regression.py`, `tests/baselines/`)
+- Renders deterministic reference surfaces (a flat grid and a smooth Gaussian dome) through
+  `analyze_zebra` / `analyze_reflection` and compares the PNG output, pixel-for-pixel, against
+  committed baseline images in `tests/baselines/`.
+- Comparison decodes both PNGs to RGB pixels (via a minimal built-in PNG decoder) and diffs
+  them — robust to zlib-version differences in the compressed byte stream; drift is reported
+  as a pixel count plus the first differing coordinate.
+- Also guards renderer determinism (same input → identical bytes) and stripe contrast on
+  curved surfaces.
+- Baselines auto-capture on first run when missing; regenerate intentionally after a renderer
+  change with `PARTIKUS_UPDATE_BASELINES=1`.
+- 7 new tests → **711 total, all passing**.
 
 ---
 
