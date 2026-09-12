@@ -39,15 +39,54 @@ if _HAS_GUI:
         tier08_electronics         as _t08,
     )
 
+    # ── Cutters ───────────────────────────────────────────────────────────────
+    #
+    # These return a NEGATIVE volume — the shape of a hole, not a part. You make
+    # them, position them, and subtract them with Part -> Boolean -> Cut. On
+    # their own they are a plain cylinder or box, which is exactly what they look
+    # like in the tree, and nothing in the GUI used to say otherwise: a user
+    # reasonably reads "Heat Set Insert Pocket" producing a bare cylinder as the
+    # toolkit failing to model an insert.
+    #
+    # Membership is from each function's own docstring — hole, slot, cutout,
+    # pocket, recess, groove, keyway. Deliberately excluded because they are
+    # real parts despite the name: vent_slots and display_window are panels that
+    # already have their apertures cut, cable_channel and led_holder are solids,
+    # and dovetail_pin, tongue, tab and boss are the positive halves of pairs.
+    _CUTTER_NAMES = frozenset({
+        # tier04
+        "counterbore_hole", "countersink_hole", "slot_hole", "keyway",
+        "slot_cutout", "dovetail_slot", "groove",
+        # tier05
+        "tapped_hole", "clearance_hole", "heat_set_insert_pocket",
+        # tier06
+        "bearing_pocket",
+        # tier07
+        "magnetic_recess", "button_cutout",
+        # tier08
+        "usb_cutout", "hdmi_cutout", "barrel_jack_cutout",
+    })
+
+    _CUTTER_COMMANDS = []
+
     # ── Command factory ───────────────────────────────────────────────────────
 
     def _register(cmd_name, fn):
         """Create and register a one-shot dialog command for *fn*."""
+        is_cutter = fn.__name__ in _CUTTER_NAMES
+        label = fn.__name__.replace("_", " ").title()
+        summary = (fn.__doc__ or "").strip().split("\n")[0]
+        if is_cutter:
+            label += " (cutter)"
+            summary = ("CUTTER — a negative volume. Subtract it from a part with "
+                       "Part → Boolean → Cut; it is not a part on its own. " + summary)
+            _CUTTER_COMMANDS.append(cmd_name)
+
         class _Cmd:
             def GetResources(self):
                 return {
-                    "MenuText": fn.__name__.replace("_", " ").title(),
-                    "ToolTip":  (fn.__doc__ or "").strip().split("\n")[0],
+                    "MenuText": label,
+                    "ToolTip":  summary,
                     "Pixmap":   "",
                 }
             def Activated(self):
@@ -199,6 +238,13 @@ if _HAS_GUI:
             self.appendToolbar("Partikus — Components",  _names(_T6))
             self.appendToolbar("Partikus — Enclosures",  _names(_T7))
             self.appendToolbar("Partikus — Electronics", _names(_T8))
+
+            # Every cutter again, gathered in one place. The commands stay in
+            # their tier toolbars as well — this is for finding them, not for
+            # moving them, since you reach for a cutter knowing you want to
+            # remove material rather than knowing which tier it came from.
+            if _CUTTER_COMMANDS:
+                self.appendToolbar("Partikus — Cutters", list(_CUTTER_COMMANDS))
 
             # Menu tree under &Partikus
             base = ["&Partikus"]

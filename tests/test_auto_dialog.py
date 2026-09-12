@@ -193,6 +193,48 @@ def test_degenerate_shape_is_reported_not_silent():
     assert "probe" in seen[0]
 
 
+# ── Cutter marking ───────────────────────────────────────────────────────────
+#
+# workbench.py cannot be imported under freecadcmd — FreeCADGui exists there but
+# is a stub without addCommand, so registration raises. The cutter list is read
+# out of the source instead. That is weaker than importing it, but it does catch
+# the failure that matters: a name in the list that is not a real function, so
+# the marking silently applies to nothing.
+
+def _cutter_names_from_source():
+    import ast
+    path = os.path.join(_ROOT, "partikus", "gui", "workbench.py")
+    with open(path) as fh:
+        tree = ast.parse(fh.read(), path)
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.Assign):
+            continue
+        if not any(getattr(t, "id", None) == "_CUTTER_NAMES" for t in node.targets):
+            continue
+        call = node.value
+        if isinstance(call, ast.Call) and call.args:
+            return {e.value for e in call.args[0].elts}
+    raise AssertionError("_CUTTER_NAMES not found in workbench.py")
+
+
+def test_every_cutter_name_is_a_real_function():
+    for name in _cutter_names_from_source():
+        fn = getattr(partikus, name, None)
+        assert callable(fn), f"_CUTTER_NAMES lists {name!r}, which partikus does not export"
+
+
+def test_known_cutters_are_marked_and_parts_are_not():
+    names = _cutter_names_from_source()
+    # A negative volume you subtract...
+    for name in ("clearance_hole", "tapped_hole", "counterbore_hole",
+                 "heat_set_insert_pocket", "bearing_pocket", "usb_cutout"):
+        assert name in names, f"{name} is a cutter but is not marked as one"
+    # ...versus a part that merely sounds like one.
+    for name in ("vent_slots", "display_window", "cable_channel", "led_holder",
+                 "dovetail_pin", "tongue", "tab", "boss"):
+        assert name not in names, f"{name} is a real part and must not be marked a cutter"
+
+
 def test_valid_profile_wire_is_not_warned_about():
     # Tier 3 profiles are wires with zero volume and that is correct.
     import FreeCAD
