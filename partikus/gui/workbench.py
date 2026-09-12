@@ -1,20 +1,30 @@
 """
 FreeCAD Workbench registration for Partikus — Tiers 1-8.
 
-Drop this file (or the entire partikus package) into FreeCAD's Mod directory,
-or add the parent of the partikus/ package to sys.path in user.cfg / InitGui.py.
+FreeCAD loads this through InitGui.py at the add-on root; run ./install.sh to
+create that file and symlink the repo into FreeCAD's user Mod directory.
 
-This module imports PySide2 and FreeCADGui — it is a no-op when loaded outside
-a FreeCAD GUI session.
+Qt comes in through FreeCAD's own `PySide` shim, which forwards to whichever
+binding the running FreeCAD was built against (PySide6 on FreeCAD 1.x). This
+module is a no-op outside a FreeCAD GUI session.
 """
 
 try:
     import FreeCAD
     import FreeCADGui
-    from PySide2 import QtGui
+    from PySide import QtGui
     _HAS_GUI = True
-except ImportError:
+except ImportError as _e:
+    # Say so — see the note in auto_dialog.py. Silence here means the workbench
+    # never registers and FreeCAD reports nothing at all.
     _HAS_GUI = False
+    try:
+        import FreeCAD as _FC
+        _FC.Console.PrintWarning(
+            f"Partikus: workbench not registered — {type(_e).__name__}: {_e}\n")
+    except Exception:
+        import sys as _sys
+        _sys.stderr.write(f"Partikus: workbench not registered — {_e}\n")
 
 if _HAS_GUI:
     from .auto_dialog import auto_dialog

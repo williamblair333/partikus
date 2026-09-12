@@ -1,19 +1,32 @@
 """
 Auto-generated Qt dialog from function signatures.
 
-Requires FreeCAD GUI (PySide2).  Import only from within a FreeCAD GUI session.
+Requires a FreeCAD GUI session.  Qt comes in through FreeCAD's own `PySide`
+shim rather than PySide2 or PySide6 directly: the shim forwards to whichever
+binding the running FreeCAD was built against (PySide6 on FreeCAD 1.x), so this
+module keeps working across the Qt5 -> Qt6 change.
 """
 
 import inspect
 from typing import get_type_hints, Literal, get_args, get_origin
 
 try:
-    from PySide2 import QtWidgets, QtCore
+    from PySide import QtWidgets, QtCore
     import FreeCAD
     import FreeCADGui
     HAS_GUI = True
-except ImportError:
+except ImportError as _e:
+    # Say so. A silent HAS_GUI = False here imports cleanly, registers nothing,
+    # and is indistinguishable from "Partikus is not installed" — which is how
+    # a stale `from PySide2 import ...` went unnoticed through all of FreeCAD 1.x.
     HAS_GUI = False
+    try:
+        import FreeCAD as _FC
+        _FC.Console.PrintWarning(
+            f"Partikus: GUI dialogs disabled — {type(_e).__name__}: {_e}\n")
+    except Exception:
+        import sys as _sys
+        _sys.stderr.write(f"Partikus: GUI dialogs disabled — {_e}\n")
 
 
 def auto_dialog(fn):
@@ -25,10 +38,12 @@ def auto_dialog(fn):
         The PartikusShape produced by fn, or None if the dialog was cancelled.
     """
     if not HAS_GUI:
-        raise RuntimeError("auto_dialog requires a FreeCAD GUI session (PySide2 not found)")
+        raise RuntimeError(
+            "auto_dialog requires a FreeCAD GUI session — Qt (PySide) or "
+            "FreeCADGui could not be imported; see the Report view for the reason")
 
     dlg = _build_dialog(fn)
-    if dlg.exec_() == QtWidgets.QDialog.Accepted:
+    if dlg.exec() == QtWidgets.QDialog.Accepted:
         result = fn(**dlg.get_values())
         _add_to_doc(fn.__name__, result)
         return result
@@ -104,6 +119,28 @@ def _make_widget(annotation, default):
         if default is not None:
             idx = next((i for i, c in enumerate(choices) if str(c) == str(default)), 0)
             w.setCurrentIndex(idx)
+        return w
+
+    # str → QComboBox for face anchors, QLineEdit otherwise.
+    #
+    # Without this branch a string parameter fell through to the QDoubleSpinBox
+    # below and get_values() returned 0.0 for it, so every command carrying one
+    # (open_face, hinge_side, battery_type, connector_type, model, ...) died
+    # inside the geometry call with an unrelated-looking error.
+    #
+    # The face list is a heuristic and only covers the four anchor parameters.
+    # The real fix is a Literal[...] annotation on each constrained string
+    # parameter, which the branch above already turns into a validated combo
+    # box; 28 exported functions still need one. Until then those get free text.
+    if annotation is str or isinstance(default, str):
+        faces = ["TOP", "BOTTOM", "FRONT", "BACK", "LEFT", "RIGHT"]
+        if default in faces:
+            w = QtWidgets.QComboBox()
+            w.addItems(faces)
+            w.setCurrentIndex(faces.index(default))
+            return w
+        w = QtWidgets.QLineEdit()
+        w.setText(str(default) if default is not None else "")
         return w
 
     # bool → QCheckBox
