@@ -11,6 +11,31 @@ Versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+**GUI-created parts were invisible in the 3D view** (`partikus/core/serialise.py`,
+`tests/test_serialise.py`)
+- `save_to_doc` creates a `Part::FeaturePython`, which gets FreeCAD's
+  `ViewProviderPartExt` — but that view provider asks a Python proxy which display mode to
+  use, and nothing was ever attached to the `ViewObject`. The result: an object that is
+  valid, `Visibility=True`, correctly listed in the tree, with `DisplayMode` unset and no
+  geometry drawn. No exception, no log line, nothing in the Report view.
+- Measured on FreeCAD 1.1.3, same solid three ways:
+
+  | object | `ViewObject.Proxy` | `DisplayMode` |
+  |---|---|---|
+  | `save_to_doc` before | `None` | `None` — nothing rendered |
+  | `save_to_doc` after | `0` | `'Flat Lines'` |
+  | plain `Part::Feature` (control) | unset | `'Flat Lines'` |
+
+  `listDisplayModes()` returns all four modes in every case — availability was never the
+  problem, selection was.
+- `save_to_doc` now sets `ViewObject.Proxy = 0`, FreeCAD's convention for "no Python view
+  provider, use the C++ default", guarded on `ViewObject is not None` since it is `None`
+  under `freecadcmd`. The anchor properties are untouched and the `.FCStd` round-trip is
+  unaffected.
+- 2 new tests → **758 total, all passing**. The rendered half cannot be asserted from
+  `freecadcmd` (no GUI, so no `ViewObject`), so the tests cover the headless path and guard
+  the line against deletion; the visible half was verified in an offscreen GUI session.
+
 **`InitGui.py` raised `NameError` on `__file__`, so the workbench never registered**
 (`InitGui.py`, `tests/test_gui_loader.py`)
 - FreeCAD does not import the loaders as modules — it compiles each one and `exec`s it in

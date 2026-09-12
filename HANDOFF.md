@@ -132,6 +132,20 @@ Remember `sys.stderr.write` — `print()` is swallowed.
 running FreeCAD keeps the old code. Fully restart it, or the fix will look like it did
 nothing.
 
+**`save_to_doc` must set `obj.ViewObject.Proxy = 0`.** A `Part::FeaturePython` gets
+`ViewProviderPartExt`, which asks a Python proxy which display mode to use. With no proxy
+on the `ViewObject` it selects none, and the part is valid, `Visibility=True`, listed in
+the tree — and invisible, with no error anywhere. Measured on 1.1.3:
+
+| `ViewObject.Proxy` | `DisplayMode` | rendered |
+|---|---|---|
+| `None` | `None` | no |
+| `0` | `'Flat Lines'` | yes |
+
+Guard it on `ViewObject is not None` — it is `None` under `freecadcmd`, and an unguarded
+assignment breaks every headless caller. A blank **Display Mode** in the View panel is the
+signature of this failure; check it first when a part does not appear.
+
 ### Critical freecadcmd quirks
 
 1. **stdout is captured** — `print()` output is invisible. Use `sys.stderr.write()` or `FreeCAD.Console.PrintMessage()`.

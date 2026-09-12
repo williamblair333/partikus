@@ -70,6 +70,28 @@ def save_to_doc(shape, label, doc=None):
     obj.Shape               = shape.shape
     obj.PartikusAnchors      = {k: (v.x, v.y, v.z) for k, v in shape.anchors.items()}
     obj.PartikusOrientations = {k: (v.x, v.y, v.z) for k, v in shape.orientations.items()}
+
+    # DO NOT REMOVE — this line is what makes the shape visible.
+    #
+    # A Part::FeaturePython gets FreeCAD's ViewProviderPartExt, but that view
+    # provider asks a Python proxy which display mode to use. With no proxy on
+    # the ViewObject it picks none, and the result is an object that is valid,
+    # visible, listed in the tree, and draws absolutely nothing. Measured on
+    # FreeCAD 1.1.3:
+    #
+    #     no proxy   -> DisplayMode None          -> nothing rendered
+    #     Proxy = 0  -> DisplayMode 'Flat Lines'  -> rendered
+    #
+    # (listDisplayModes() reports all four modes in both cases — availability is
+    # not the problem, selection is.) Assigning 0 is the FreeCAD convention for
+    # "no Python view provider, use the C++ default", and it matches what a
+    # plain Part::Feature does.
+    #
+    # There is no error to catch here: FreeCAD considers an unrendered object a
+    # perfectly good object, which is why this reached a user before a test.
+    if obj.ViewObject is not None:        # None under freecadcmd — no GUI
+        obj.ViewObject.Proxy = 0
+
     doc.recompute()
     return obj
 

@@ -158,3 +158,45 @@ def test_fcstd_roundtrip_anchors():
             os.unlink(path)
         except Exception:
             pass
+
+
+# ── View provider ─────────────────────────────────────────────────────────────
+#
+# A Part::FeaturePython with no proxy on its ViewObject gets DisplayMode None
+# and renders nothing, while remaining valid, visible and listed in the tree.
+# There is no exception and no log line — it reached a user before it reached a
+# test. save_to_doc() sets ViewObject.Proxy = 0 to get FreeCAD's C++ default.
+#
+# The visible half of that cannot be asserted here: under freecadcmd there is no
+# GUI, so obj.ViewObject is None and there is no DisplayMode to read. Measured
+# on FreeCAD 1.1.3, no proxy gives DisplayMode None and Proxy = 0 gives
+# 'Flat Lines'. These two tests cover what this environment can actually reach —
+# that the headless path survives the ViewObject access, and that the line has
+# not been deleted as meaningless-looking.
+
+def test_save_to_doc_works_without_a_gui():
+    # obj.ViewObject is None under freecadcmd. An unguarded ViewObject.Proxy
+    # assignment raises AttributeError here and breaks every headless caller.
+    doc = FreeCAD.newDocument("TestSerVP1")
+    try:
+        obj = save_to_doc(box(10, 10, 10), "NoGuiBox", doc)
+        assert obj.ViewObject is None, (
+            "expected no ViewObject under freecadcmd — if this now exists, assert "
+            "on obj.ViewObject.DisplayMode directly instead of the source check below")
+        assert _approx(obj.Shape.Volume, 1000.0, tol=1.0)
+    finally:
+        FreeCAD.closeDocument(doc.Name)
+
+
+def test_save_to_doc_still_sets_the_view_provider_proxy():
+    # Source-level guard, deliberately. `ViewObject.Proxy = 0` reads like a
+    # leftover debug line, and deleting it makes every GUI-created part
+    # invisible with no error anywhere.
+    import inspect
+    from partikus.core import serialise
+    src = inspect.getsource(serialise.save_to_doc)
+    code = "\n".join(line for line in src.splitlines()
+                     if not line.lstrip().startswith("#"))
+    assert "ViewObject" in code and "Proxy" in code, (
+        "save_to_doc no longer sets ViewObject.Proxy — parts created from the GUI "
+        "will be valid, visible in the tree, and invisible in the 3D view")
