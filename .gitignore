@@ -19,6 +19,11 @@ examples/out/
 # AppImage / extracted filesystem
 *.AppImage
 squashfs-root/
+app/
+
+# Session handoff queue (local working notes, not repo history)
+review/
+reviewed/
 
 # Environment
 .env
