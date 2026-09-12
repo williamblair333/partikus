@@ -9,6 +9,35 @@ Versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Fixed
+
+**FreeCAD workbench never loaded on FreeCAD 1.x** (`Init.py`, `InitGui.py`, `install.sh`,
+`partikus/gui/workbench.py`, `partikus/gui/auto_dialog.py`)
+- Three independent defects, each of which alone left the workbench absent from the
+  dropdown with no error in the Report view, the console, or anywhere else.
+- **Not installable.** FreeCAD runs `partikus/gui/workbench.py` only by executing
+  `InitGui.py` from the root of a directory on its Mod path. Neither loader file existed
+  and `install.sh` never touched the Mod path, so the registration code had never once
+  been executed by FreeCAD. Both loaders are added (tracked, with headers explaining why
+  they must not be deleted) and `install.sh` now symlinks the checkout into
+  `FreeCAD.getUserAppDataDir()/Mod/partikus` — resolved from FreeCAD, never guessed,
+  since that path is version-stamped and a wrong one fails silently.
+- **PySide2 on a PySide6 FreeCAD.** Both GUI modules imported `PySide2` inside a bare
+  `except ImportError` that set `_HAS_GUI = False`, so on FreeCAD 1.x they imported
+  cleanly and did nothing. Now on FreeCAD's version-agnostic `PySide` shim, with
+  `exec_()` → `exec()` for Qt6. The except path warns to the Report view: a module that
+  registers nothing and reports nothing is indistinguishable from one that is not
+  installed, which is what made this cost hours to find.
+- **String parameters became `0.0`.** `auto_dialog._make_widget` had no `str` branch, so
+  a string parameter fell through to a `QDoubleSpinBox` and `get_values()` returned a
+  float for it — `hollow_box(open_face="TOP")` reached `makeThickness` as `0.0` and raised
+  `expect shape in sequence`. Affected every command with `open_face`, `hinge_side`,
+  `battery_type`, `connector_type`, `model`, `rail_type`, `shape` or `plane`. Face anchors
+  now get a combo box, other strings a line edit. Verified headlessly under offscreen Qt.
+- Known gap: 28 exported functions take a constrained string with no `Literal[...]`
+  annotation, so the dialog offers free text where it could offer a validated dropdown.
+  The `Literal → QComboBox` branch that would handle them already exists.
+
 ### Changed
 
 **AI prompt + generator whitelist expansion** (`partikus/ai/analyzer.py`, `partikus/ai/generator.py`)

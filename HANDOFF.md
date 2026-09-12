@@ -1,8 +1,13 @@
 # Partikus — Developer Handoff
 
-**Last updated:** 2026-08-07  
-**Status:** Milestones 1–13 complete + visual regression suite + AI-prompt expansion — 717 tests passing — showcase example added  
-**Next milestone:** New tier / BRep-stub workarounds (when FreeCAD exposes the APIs)
+**Last updated:** 2026-09-12  
+**Status:** Milestones 1–13 complete + visual regression suite + AI-prompt expansion + PF1e template example — 750 tests passing — **GUI workbench now actually installs and loads**  
+**Next milestone:** `Literal[...]` annotations for constrained string params (Tiers 1–8), then a new tier / BRep-stub workarounds (when FreeCAD exposes the APIs)
+
+> **Start here if you are picking up the GUI work:** §2a below. The workbench was
+> unreachable on every FreeCAD 1.x install until 2026-09-12; three root causes are fixed
+> and committed, and the remaining work is a manual click-through test plan plus the
+> `Literal` annotation pass.
 
 **Repo hosting:** Primary remote is self-hosted **Gitea** — `origin` = `http://10.0.0.100:3000/bill/partikus`, `remote.pushDefault=origin`. GitHub (`github` remote → `williamblair333/partikus`) is secondary/mirror. Plain `git push` goes to Gitea. Note: GitHub `main` was force-rewound to `f2dc1d0` on 2026-08-07 (dropped PR #1); local/Gitea `main` is the source of truth.
 
@@ -48,6 +53,53 @@ squashfs-root/usr/bin/freecadcmd tests/run_tests.py
 squashfs-root/usr/bin/freecadcmd my_script.py
 ```
 
+## 2a. Installing the GUI Workbench
+
+```bash
+cd /opt/proj/partikus
+./install.sh          # symlinks this checkout into FreeCAD's user Mod directory
+```
+
+Then restart FreeCAD and pick **Partikus** from the workbench dropdown.
+
+How it works, and the three ways it used to fail silently:
+
+| Piece | Why it exists |
+|---|---|
+| `Init.py` | FreeCAD executes this by name from the root of every Mod directory, console and GUI. An add-on without it is skipped with no error. |
+| `InitGui.py` | Same, GUI sessions only. This is the *only* thing that ever imports `partikus/gui/workbench.py`. Without it the registration code never runs. |
+| `install.sh` symlink | Puts the checkout on FreeCAD's Mod path at `FreeCAD.getUserAppDataDir()/Mod/partikus`. |
+
+**Do not delete `Init.py` or `InitGui.py`.** They are nearly empty and look like stray
+files at the repo root. They are load-bearing; both carry a header saying so.
+
+**The Mod path is version-stamped** (`~/.local/share/FreeCAD/v1-1/`). A FreeCAD upgrade
+moves it and the workbench disappears with no error — re-run `./install.sh`. The script
+resolves the path from FreeCAD itself and refuses to guess; if the probe comes back empty
+it skips the step loudly rather than installing somewhere FreeCAD does not read.
+
+**Qt binding:** use `from PySide import ...`, never `PySide2` or `PySide6` directly.
+`PySide` is FreeCAD's own shim (`squashfs-root/usr/Ext/PySide/`) and forwards to whichever
+binding the running FreeCAD was built against — PySide6 on FreeCAD 1.x. A `PySide2` import
+inside `try/except ImportError` is how this project shipped a GUI layer that imported
+cleanly and did nothing for an entire release line. Both GUI modules now warn to the
+Report view on the except path; keep it that way.
+
+**Verifying GUI code headlessly** — no display needed, and far faster than restarting the
+GUI to test a widget change:
+
+```bash
+QT_QPA_PLATFORM=offscreen squashfs-root/usr/bin/freecadcmd your_probe.py
+```
+
+`FreeCADGui` and the full Qt widget set import fine under `freecadcmd` this way, so
+`auto_dialog._build_dialog(fn)` / `.get_values()` can be exercised end-to-end in a script.
+Remember `sys.stderr.write` — `print()` is swallowed.
+
+**FreeCAD caches imported modules.** After editing anything under `partikus/gui/`, a
+running FreeCAD keeps the old code. Fully restart it, or the fix will look like it did
+nothing.
+
 ### Critical freecadcmd quirks
 
 1. **stdout is captured** — `print()` output is invisible. Use `sys.stderr.write()` or `FreeCAD.Console.PrintMessage()`.
@@ -63,6 +115,9 @@ partikus/
 ├── README.md
 ├── CHANGELOG.md
 ├── HANDOFF.md                           ← this file
+├── Init.py                              # FreeCAD add-on loader, console — DO NOT DELETE
+├── InitGui.py                           # FreeCAD add-on loader, GUI — DO NOT DELETE
+├── install.sh                           # finds FreeCAD + symlinks into its Mod dir
 ├── partikus/
 │   ├── __init__.py                      # public API — import everything from here
 │   ├── core/
@@ -120,9 +175,11 @@ partikus/
 │   ├── test_serialise.py                # anchor save/load round-trip tests
 │   ├── test_subd.py                     # Catmull-Clark + SubD op tests
 │   ├── test_visual_regression.py        # zebra/reflection PNG output vs baselines
+│   ├── test_pf1e_templates.py           # PF1e example: distance rule + printable parts
 │   └── baselines/                       # committed reference PNGs for visual regression
 └── examples/
     ├── capped_cylinder.py
+    ├── pf1e_burst_templates.py      # printable Pathfinder 1E area-of-effect rings
     └── rpi4_enclosure.py            # full-API showcase (see docs/rpi4_enclosure_walkthrough.md)
 ```
 
@@ -307,7 +364,53 @@ Candidate next steps (no hard blockers):
 
 1. ~~**Visual regression tests**~~ — DONE (2026-08-07). `tests/test_visual_regression.py` renders a flat grid + Gaussian dome through `analyze_zebra`/`analyze_reflection`, compares PNGs pixel-for-pixel against committed baselines in `tests/baselines/`. Recapture with `PARTIKUS_UPDATE_BASELINES=1`.
 2. ~~**Expand AI system prompt**~~ — DONE (2026-08-07), but scoped differently than originally worded. The AI pipeline decomposes an object into **shape constructors + assembly ops** producing a final `PartikusShape`. `analyze_zebra`/`analyze_reflection` return analysis dicts/PNGs (not shapes) and `subd_*` operate on `SubDMesh` (not the shape/assembly schema) — adding them would generate broken scripts, so they're **deliberately excluded**. Instead the prompt catalogue + `_ALLOWED_FUNCTIONS` grew from ~20 to ~90 real constructive functions (Tiers 1–14: fasteners, gears, enclosures, electronics, mechanical features, patterns, architectural). Guard tests in `test_ai.py` enforce prompt ⊆ whitelist ⊆ real callable exports, and that the 4 Tier-15A stubs are never offered. To surface analysis/SubD to the AI later, add a separate post-processing schema slot — don't put them in `shapes`/`assembly`.
-3. **New tier** — Tier 16 or domain-specific (e.g., jewellery, robotics, sheet metal)
+3. **`Literal[...]` annotations for constrained string params — the next GUI task.**
+   `auto_dialog` already turns a `Literal["a","b","c"]` annotation into a validated combo
+   box. 28 exported functions take a constrained string with no annotation, so the dialog
+   offers free text and a typo becomes a traceback instead of an impossible input. The
+   full list, from a signature sweep of `partikus.__all__`:
+
+   | Tier | Function(s) and parameter |
+   |---|---|
+   | 2 | `rounded_cylinder(ends='BOTH')` |
+   | 5 | `clearance_hole(bolt_size='M6', fit='close')`, `heat_set_insert_pocket(insert_size='M3')`, `screw_size_preset(name='M6')`, `threaded_rod(thread_form='metric')` |
+   | 6 | `bearing_pocket(bearing_id='608')`, `pulley_timing(belt_type='GT2')` |
+   | 7 | `battery_compartment(battery_type='AA')`, `button_cutout(shape='round')`, `hinged_box(hinge_side='BACK')`, `hollow_box(open_face='TOP')` |
+   | 8 | `arduino_mount(model='uno')`, `din_rail_clip(rail_type='35mm')`, `hdmi_cutout(connector_type='full')`, `raspberry_pi_mount(model='4B')`, `usb_cutout(connector_type='USB-C')` |
+   | 11 | `mirror(plane='XY')`, `mirror_position(plane='XY')` |
+   | 14 | `align(anchor='CENTER')`, `attach(parent_anchor='TOP', child_anchor='BOTTOM')`, `stack_on(alignment='CENTER')` |
+   | 15 | `analyze_curvature(mode='gaussian')`, `conic_curve(conic_type='parabola')`, `match_surfaces(continuity='G1')`, `mesh_to_nurbs(patch_size='auto')`, `nurbs_to_subd(density='medium')`, `subd_symmetry(plane='YZ', mode='mirror')` |
+   | io | `save_fcstd(doc_name='Partikus')` — free text, correctly so; leave it |
+
+   The accepted values are already in each function's body (usually a dict lookup or an
+   `if/elif` chain that raises on an unknown key) — lift them into the annotation. Tiers
+   1–8 are the ones wired into the workbench, so do those first. Prioritise over the
+   hardcoded face-list heuristic in `_make_widget`, which this would make redundant.
+
+4. **Finish the GUI click-through test plan.** Everything below step 2 is untested:
+   1. ~~Restart FreeCAD, Ctrl+N, Partikus → Enhanced → Hollow Box → OK~~ — the underlying
+      defect is fixed and verified headlessly (dialog values → valid solid); confirm in
+      the GUI that the Open Face dropdown appears.
+   2. Partikus → Primitives → Cylinder → OK.
+   3. Select the cylinder → Data → Placement → offset it to overlap the box.
+   4. Part workbench → select both → Part → Boolean → Cut, then Undo and Fuse.
+      This is the step with real risk: it depends on `save_to_doc` producing a
+      `Part::FeaturePython` whose `Shape` the Part booleans accept. Unconfirmed.
+   5. File → Export → STL.
+
+   Commands are disabled until a document exists (`_Cmd.IsActive` returns
+   `FreeCAD.ActiveDocument is not None`), and nothing tells the user why — a fresh launch
+   on the Start page shows greyed buttons with no explanation. Either auto-create a
+   document in `Activated()` (`_add_to_doc` already does) and return `True`, or add a
+   tooltip.
+
+5. **New tier** — Tier 16 or domain-specific (e.g., jewellery, robotics, sheet metal)
+
+6. **Recipe pattern (discussed, not started).** The stated want is "pick a part from the
+   library → set parameters → cut → weld", with no AI. Tiers 4–8 plus the auto-dialog are
+   already that; what is missing is discoverability and the combine step. A recipe module
+   (top-level parameters + `build(**params)` + one generic re-run-on-change dialog,
+   OpenSCAD Customizer style) is the cheap route.
 
 ### Adding a new tier — checklist
 
@@ -402,6 +505,7 @@ _MODULES = [
     "tests.test_serialise",
     "tests.test_subd",
     "tests.test_visual_regression",   # visual regression: zebra/reflection PNG baselines
+    "tests.test_pf1e_templates",      # example guard: PF1e distance rule + printable parts
 ]
 
 # Imports each module, finds test_* functions, calls them,
@@ -421,13 +525,21 @@ from partikus.gui.auto_dialog import auto_dialog
 auto_dialog(rounded_box)   # opens a dialog for rounded_box parameters
 ```
 
-Widget mapping:
-- `float` → `QDoubleSpinBox`
-- `int` → `QSpinBox`
+Widget mapping, in the order `_make_widget` tests it:
+- `Literal["a","b","c"]` → `QComboBox` (validated — the preferred form)
+- `str` → `QComboBox` if the default is one of the six face anchors, else `QLineEdit`
 - `bool` → `QCheckBox`
-- `Literal["a","b","c"]` → `QComboBox`
+- `int` → `QSpinBox`
+- everything else → `QDoubleSpinBox`
 
-The workbench (`gui/workbench.py`) registers commands for Tier 1 only. Expand it for each new tier by adding entries to `_COMMANDS` and `_TOOLBAR`.
+The `str` branch is a stopgap. A string parameter used to fall through to the float
+spinbox and arrive at the geometry call as `0.0`; the face-anchor list is a heuristic that
+covers four parameters. See §6 item 3 — annotating the other 28 with `Literal` makes it
+redundant and turns typos into impossible inputs instead of tracebacks.
+
+The workbench (`gui/workbench.py`) registers Tiers 1–8 — 84 functions across 8 toolbars
+and a full menu tree. Expand it for each new tier by adding entries to `_COMMANDS` and
+`_TOOLBAR`.
 
 ---
 
@@ -481,11 +593,11 @@ Expected output:
 
 ```
 ============================================================
-  717 passed  |  0 failed
+  750 passed  |  0 failed
 ```
 
 If anything is failing, fix it before adding new code.
 
 ---
 
-*End of handoff. Milestones 1–13 complete + visual regression suite + AI-prompt expansion. 717 tests passing. Next: new tier, or BRep-stub workarounds when FreeCAD exposes the APIs.*
+*End of handoff. Milestones 1–13 complete + visual regression suite + AI-prompt expansion + PF1e template example. 750 tests passing. GUI workbench installs and loads as of 2026-09-12. Next: `Literal` annotations for Tiers 1–8, then the GUI click-through test plan.*
