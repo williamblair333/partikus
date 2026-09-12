@@ -173,10 +173,17 @@ def _make_widget(annotation, default):
     # (open_face, hinge_side, battery_type, connector_type, model, ...) died
     # inside the geometry call with an unrelated-looking error.
     #
-    # The face list is a heuristic and only covers the four anchor parameters.
-    # The real fix is a Literal[...] annotation on each constrained string
-    # parameter, which the branch above already turns into a validated combo
-    # box; 28 exported functions still need one. Until then those get free text.
+    # This branch is now only reached by parameters that are deliberately NOT
+    # Literal-annotated — 23 of the 32 string parameters are, and get the
+    # validated combo box above instead. What is left is anchor names
+    # (align.anchor, attach.parent_anchor/child_anchor, stack_on.alignment),
+    # where the valid set is per-shape and a fixed list would be wrong, and
+    # parsed formats like bolt_size="M6x1.0".
+    #
+    # The six-face list stays because it covers the common case of those anchor
+    # parameters usefully. It is a convenience, not a validation: a shape may
+    # have 27 anchors and this offers six of them, so free text below remains
+    # the fallback.
     if annotation is str or isinstance(default, str):
         faces = ["TOP", "BOTTOM", "FRONT", "BACK", "LEFT", "RIGHT"]
         if default in faces:

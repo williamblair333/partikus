@@ -1,8 +1,8 @@
 # Partikus — Developer Handoff
 
 **Last updated:** 2026-09-12  
-**Status:** Milestones 1–13 complete + visual regression suite + AI-prompt expansion + PF1e template example — 750 tests passing — **GUI workbench now actually installs and loads**  
-**Next milestone:** `Literal[...]` annotations for constrained string params (Tiers 1–8), then a new tier / BRep-stub workarounds (when FreeCAD exposes the APIs)
+**Status:** Milestones 1–13 complete + visual regression suite + AI-prompt expansion + PF1e template example — 790 tests passing — **GUI workbench installs, loads, renders, and its dialogs pass correct arguments**  
+**Next milestone:** finish the GUI click-through test plan (Part Boolean + STL export), then a new tier / BRep-stub workarounds (when FreeCAD exposes the APIs)
 
 > **Start here if you are picking up the GUI work:** §2a below. The workbench was
 > unreachable on every FreeCAD 1.x install until 2026-09-12; three root causes are fixed
@@ -108,6 +108,25 @@ binding the running FreeCAD was built against — PySide6 on FreeCAD 1.x. A `PyS
 inside `try/except ImportError` is how this project shipped a GUI layer that imported
 cleanly and did nothing for an entire release line. Both GUI modules now warn to the
 Report view on the except path; keep it that way.
+
+**The dialog is the only caller that invents argument values.** Every geometry test in this
+project calls the functions directly with good arguments, so a parameter the dialog
+mistranslates passes the whole suite and fails the instant a user clicks OK. Two have
+shipped, both the same shape — a value the dialog could not express became `0.0`:
+
+| parameter kind | became | fixed |
+|---|---|---|
+| `str` (`open_face="TOP"`) | `0.0` | 2026-09-12 |
+| `None` (`radius=None`) | `0.0` | 2026-09-12 |
+
+The second was worse: functions branch on `if x is not None`, so `0.0` selects the other
+branch. `cone` and `rack` crashed; `cylinder`, `sphere`, `torus`, `disk`, `hemisphere` and
+`bearing_pocket` returned invalid zero-volume solids **with no error anywhere**.
+
+`tests/test_auto_dialog.py` tests the class, not the instance: every `None`-defaulted
+parameter in the whole API must round-trip as `None`, and the dialog's untouched defaults
+must produce the same volume as calling the function directly. Add to it when you add a
+parameter kind.
 
 **Verifying GUI code headlessly.** Two levels, and the difference matters:
 
@@ -410,7 +429,14 @@ Candidate next steps (no hard blockers):
 
 1. ~~**Visual regression tests**~~ — DONE (2026-08-07). `tests/test_visual_regression.py` renders a flat grid + Gaussian dome through `analyze_zebra`/`analyze_reflection`, compares PNGs pixel-for-pixel against committed baselines in `tests/baselines/`. Recapture with `PARTIKUS_UPDATE_BASELINES=1`.
 2. ~~**Expand AI system prompt**~~ — DONE (2026-08-07), but scoped differently than originally worded. The AI pipeline decomposes an object into **shape constructors + assembly ops** producing a final `PartikusShape`. `analyze_zebra`/`analyze_reflection` return analysis dicts/PNGs (not shapes) and `subd_*` operate on `SubDMesh` (not the shape/assembly schema) — adding them would generate broken scripts, so they're **deliberately excluded**. Instead the prompt catalogue + `_ALLOWED_FUNCTIONS` grew from ~20 to ~90 real constructive functions (Tiers 1–14: fasteners, gears, enclosures, electronics, mechanical features, patterns, architectural). Guard tests in `test_ai.py` enforce prompt ⊆ whitelist ⊆ real callable exports, and that the 4 Tier-15A stubs are never offered. To surface analysis/SubD to the AI later, add a separate post-processing schema slot — don't put them in `shapes`/`assembly`.
-3. **`Literal[...]` annotations for constrained string params — the next GUI task.**
+3. ~~**`Literal[...]` annotations for constrained string params**~~ — DONE (2026-09-12).
+   23 of 32 string parameters are annotated and get a validated dropdown. The nine left are
+   deliberate: four take anchor names whose valid set is per-shape (a box has 27, a cylinder
+   adds two rim anchors), three take a parsed size format (`"M6"` or `"M6x1.0"`),
+   `match_surfaces` is an unimplemented stub, and `doc_name` is a name. `tests/test_auto_dialog.py`
+   guards the seven that duplicate a preset table's keys against drift.
+
+   The original list, kept for reference:
    `auto_dialog` already turns a `Literal["a","b","c"]` annotation into a validated combo
    box. 28 exported functions take a constrained string with no annotation, so the dialog
    offers free text and a typo becomes a traceback instead of an impossible input. The

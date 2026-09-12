@@ -9,7 +9,73 @@ Versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+
+**Dimension overrides on preset-driven fasteners** (`partikus/tier05_fasteners.py`,
+`partikus/tier06_mechanical_components.py`)
+- `flat_washer(bolt_diameter=6.0)` was the entire signature; everything else came from the
+  ISO table. Right for a standard part, useless for a fender washer, a jam nut, a low-head
+  cap screw, an imperial countersink, or a supplier's part 0.3 mm off standard.
+- Each dimension now takes an optional override, appended, defaulting to `None` so the ISO
+  figure is unchanged and existing calls produce byte-identical geometry:
+  `flat_washer`/`lock_washer` (inner/outer diameter, thickness), `hex_nut` (across_flats,
+  height), `hex_bolt` (across_flats, head_height), `socket_head_bolt`/`button_head_bolt`
+  (head_diameter, head_height), `flat_head_bolt` (head_diameter, head_angle_deg),
+  `heat_set_insert_pocket` (outer_diameter, length), `clearance_hole` (hole_diameter),
+  `bearing_pocket` (outer_diameter).
+- Overrides are validated: non-positive raises, a washer bore wider than its outside
+  diameter raises, `across_flats` inside the thread raises, a countersink angle outside
+  0–180° raises. `button_head_bolt` and `flat_head_bolt` no longer dead-end on "No data for
+  M14" — they say to pass the head dimensions instead.
+
+**`rack` face width** (`partikus/tier06_mechanical_components.py`)
+- Was hardcoded at 1.0 mm in the extrude and both `makeBox` calls, so every rack ever
+  produced was a 1.5 mm sliver with teeth too thin to see, mesh or print. `width` defaults
+  to 10 × module. Non-positive raises. Also removed a dead `body = Part.makeBox(...)`.
+
+**`Literal` annotations for constrained string parameters** (tiers 2, 5–8, 11, 14, 15)
+- The dialog has always turned `Literal[...]` into a validated combo box; the signatures
+  never used it, so `open_face`, `battery_type`, `connector_type` and the rest got free text
+  where a typo became a traceback. 23 of 32 string parameters now offer a dropdown, values
+  read from each function's own table or branch.
+- Seven duplicate a preset table's keys, which `Literal` forces. A test compares each against
+  the table it mirrors and another builds every offered choice, since a dropdown entry the
+  function rejects is worse than no dropdown.
+- Nine are left free text deliberately: four take anchor names, whose valid set is per-shape
+  (a box has 27); three take a parsed size format (`"M6"` or `"M6x1.0"`); `match_surfaces` is
+  an unimplemented stub whose accepted values are not knowable; `doc_name` is a name.
+
+**Cutters marked in the GUI** (`partikus/gui/workbench.py`)
+- 16 commands return a negative volume — the shape of a hole, not a part. They now carry a
+  "(cutter)" suffix, a tooltip that opens with what to do with them, and a
+  "Partikus — Cutters" toolbar collecting all of them alongside their tier toolbars.
+- Membership is from each function's docstring, not its name: `vent_slots` and
+  `display_window` are panels with their apertures already cut, `cable_channel` and
+  `led_holder` are solids, and `dovetail_pin`, `tongue`, `tab` and `boss` are positive halves
+  of pairs — none is marked.
+
 ### Fixed
+
+**Optional parameters reached the geometry call as `0.0`** (`partikus/gui/auto_dialog.py`,
+`partikus/core/serialise.py`)
+- `_build_dialog` collapsed "no default" and "defaults to `None`" into the same value, so
+  `_make_widget` gave both a float spin box starting at 0. Every optional parameter in the
+  API arrived at the geometry call as `0.0` — which is not an approximation of "unset",
+  because these functions branch on `if x is not None`.
+- An audit of all 184 exported functions found **18 producing invalid or zero-volume shapes
+  through the dialog and 86 failing outright**. `cone`, `rack`, `standoff` and `flange`
+  crashed; `cylinder`, `sphere`, `torus`, `disk`, `hemisphere` and `bearing_pocket` returned
+  invalid zero-volume solids **with no error at all**.
+- After the fix: 12 and 78. All 12 remaining are Tier 3 profiles and curves, where zero
+  volume is correct because a wire has none; the 78 are functions taking a shape or a list,
+  which the dialog cannot construct and none of which is a GUI command.
+- A `None`-defaulted parameter now gets a spin box whose minimum reads "auto" and returns
+  `None`, or a line edit with an "auto — leave blank" placeholder. The sentinel sits at
+  −1e6 mm, far below any real dimension; a test pins that it stays out of range.
+- `save_to_doc` now warns to the Report view when a shape is invalid, is a solid with zero
+  volume, or is empty. It does not raise. Tier 3 wires are exempt. Nothing objected before —
+  an empty solid adds cleanly, renders as nothing, and `to_stl` tessellates it happily, which
+  is why this class of bug reached a user before it reached a test.
 
 **GUI-created parts were invisible in the 3D view** (`partikus/core/serialise.py`,
 `tests/test_serialise.py`)
