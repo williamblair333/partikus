@@ -15,6 +15,8 @@ All dimensions in mm.
 """
 
 import math
+from typing import Literal
+
 import FreeCAD
 import Part
 
@@ -180,7 +182,8 @@ def helix_curve(diameter=20.0, pitch=5.0, turns=5.0, taper=0.0):
     return _bb_result(wire)
 
 
-def conic_curve(conic_type="parabola", focal_length=50.0, extent=100.0):
+def conic_curve(conic_type: Literal["parabola", "hyperbola"] = "parabola",
+                focal_length=50.0, extent=100.0):
     """
     Conic section curve.
 

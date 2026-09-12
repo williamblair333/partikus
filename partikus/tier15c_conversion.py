@@ -6,6 +6,8 @@ SubD-related conversions are stubbed pending Milestone 6 (SubD integration).
 """
 
 import math
+from typing import Literal
+
 import FreeCAD
 import Part
 
@@ -72,7 +74,8 @@ def subd_to_nurbs(subd, target_tolerance=0.01):
     return mesh_to_nurbs(fc_mesh_shape, patch_size="fine", degree=3, tolerance=target_tolerance)
 
 
-def nurbs_to_subd(surface, density="medium"):
+def nurbs_to_subd(surface,
+                  density: Literal["coarse", "medium", "fine"] = "medium"):
     """
     Sample a NURBS surface onto a regular quad grid to produce a SubDMesh.
 
@@ -201,7 +204,8 @@ def mesh_to_subd(mesh, preserve_features=True):
     return subd
 
 
-def mesh_to_nurbs(mesh, patch_size="auto", degree=3, tolerance=0.1):
+def mesh_to_nurbs(mesh, patch_size: Literal["auto", "fine", "coarse"] = "auto",
+                  degree=3, tolerance=0.1):
     """
     Fit a NURBS surface to a Part.Shape mesh or PartikusShape via
     BSplineSurface.approximate on sampled vertex positions.

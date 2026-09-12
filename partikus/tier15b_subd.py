@@ -7,6 +7,8 @@ PartikusShape wrapping a tessellated Part.Shape; the underlying SubDMesh
 is attached as .subd_mesh for further editing.
 """
 
+from typing import Literal
+
 from .subd_mesh import (
     SubDMesh,
     cube_mesh, sphere_mesh, cylinder_mesh, cone_mesh, torus_mesh,
@@ -234,7 +236,9 @@ def subd_crease(subd, edges, sharpness=1.0):
     return _wrap(mesh)
 
 
-def subd_symmetry(subd, plane="YZ", mode="mirror"):
+def subd_symmetry(subd,
+                  plane: Literal["YZ", "XZ", "XY"] = "YZ",
+                  mode: Literal["mirror", "replace"] = "mirror"):
     """
     Apply symmetry to a SubD mesh.
 

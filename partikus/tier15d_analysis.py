@@ -8,6 +8,8 @@ analyze_zebra and analyze_reflection: numerical analysis + optional PNG output.
 
 import math
 import os
+from typing import Literal
+
 import FreeCAD
 import Part
 
@@ -67,7 +69,8 @@ def _save_png(image_bytes, output_path):
         f.write(image_bytes)
 
 
-def analyze_curvature(surface, mode="gaussian"):
+def analyze_curvature(surface,
+                      mode: Literal["gaussian", "mean", "max", "min"] = "gaussian"):
     """
     Curvature analysis on a NURBS surface face, sampled at a 5×5 grid.
 

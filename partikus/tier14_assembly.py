@@ -4,6 +4,8 @@ Tier 14 — Assembly / Positioning System.
 All functions return a new PartikusShape; none mutate the input.
 """
 
+from typing import Literal
+
 import FreeCAD
 
 from .core.shape_wrapper import PartikusShape
@@ -98,7 +100,7 @@ def scale(shape, factor=1.0, fx=None, fy=None, fz=None):
     return PartikusShape(new_fc, new_anchors, new_orientations)
 
 
-def mirror_position(shape, plane="XY"):
+def mirror_position(shape, plane: Literal["XY", "XZ", "YZ"] = "XY"):
     """
     Reflect shape position through *plane* without keeping the original.
 
@@ -227,7 +229,7 @@ def place_beside(child, parent, side, gap=0.0):
                   offset=gap)
 
 
-def align(shape_a, shape_b, axis_name, anchor=CENTER):
+def align(shape_a, shape_b, axis_name: Literal["X", "Y", "Z"], anchor=CENTER):
     """
     Align shape_a to share the same coordinate as shape_b along *axis_name*
     at the given *anchor*.
@@ -236,7 +238,12 @@ def align(shape_a, shape_b, axis_name, anchor=CENTER):
         shape_a:   shape to move
         shape_b:   reference shape
         axis_name: "X", "Y", or "Z"
-        anchor:    which anchor point to align (default CENTER)
+        anchor:    which anchor point to align (default CENTER). Free text
+                   rather than a fixed choice list because the set is
+                   per-shape — a box carries 27 anchors (centre, 6 faces, 8
+                   corners, 12 edge midpoints) and a cylinder adds TOP_RIM and
+                   BOTTOM_RIM, so a fixed list would both offer names some
+                   shapes lack and hide ones they have.
 
     Example:
         align(pin, hole_body, "Z", anchor=BOTTOM)
