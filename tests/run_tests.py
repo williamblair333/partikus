@@ -38,6 +38,7 @@ _MODULES = [
     "tests.test_subd",
     "tests.test_visual_regression",
     "tests.test_pf1e_templates",
+    "tests.test_gui_loader",
 ]
 
 

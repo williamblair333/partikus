@@ -73,6 +73,30 @@ How it works, and the three ways it used to fail silently:
 **Do not delete `Init.py` or `InitGui.py`.** They are nearly empty and look like stray
 files at the repo root. They are load-bearing; both carry a header saying so.
 
+**Never reference `__file__` in either loader.** FreeCAD does not import them as modules —
+it compiles the source and `exec`s it in a fresh namespace with **no `__file__` bound**.
+The idiom every Python file starts with,
+
+```python
+_root = os.path.dirname(os.path.realpath(__file__))     # NameError under FreeCAD
+```
+
+raises before the loader reaches its first import, and the only symptom is one line of
+startup log:
+
+```
+During initialization the error "name '__file__' is not defined"
+occurred in .../Mod/partikus/InitGui.py
+```
+
+The workbench is then absent from the dropdown, which is indistinguishable from "not
+installed". This cost a session already. `tests/test_gui_loader.py` guards it by exec'ing
+both loaders in a namespace without `__file__`, exactly the way FreeCAD does.
+
+No `sys.path` setup is needed either — FreeCAD puts every Mod entry on `sys.path` before
+running the loader, which is why `fasteners/InitGui.py` and every other well-behaved
+add-on just imports its package directly. Keep `InitGui.py` down to that one import.
+
 **The Mod path is version-stamped** (`~/.local/share/FreeCAD/v1-1/`). A FreeCAD upgrade
 moves it and the workbench disappears with no error — re-run `./install.sh`. The script
 resolves the path from FreeCAD itself and refuses to guess; if the probe comes back empty
@@ -85,15 +109,23 @@ inside `try/except ImportError` is how this project shipped a GUI layer that imp
 cleanly and did nothing for an entire release line. Both GUI modules now warn to the
 Report view on the except path; keep it that way.
 
-**Verifying GUI code headlessly** — no display needed, and far faster than restarting the
-GUI to test a widget change:
+**Verifying GUI code headlessly.** Two levels, and the difference matters:
 
 ```bash
+# Widgets and dialogs — fast, no display, no real GUI
 QT_QPA_PLATFORM=offscreen squashfs-root/usr/bin/freecadcmd your_probe.py
+
+# Workbench registration — a real GUI session, offscreen
+QT_QPA_PLATFORM=offscreen app/FreeCAD_1.1.3-Linux-x86_64-py311.AppImage your_probe.py
 ```
 
-`FreeCADGui` and the full Qt widget set import fine under `freecadcmd` this way, so
-`auto_dialog._build_dialog(fn)` / `.get_values()` can be exercised end-to-end in a script.
+Under `freecadcmd` the full Qt widget set imports fine, so `auto_dialog._build_dialog(fn)`
+/ `.get_values()` can be exercised end-to-end. **But `FreeCADGui` there is a stub** — it
+imports, and `HAS_GUI` comes out `True`, while `addCommand` and `listWorkbenches` do not
+exist. Anything about registration must run under the second form, which starts a real GUI
+session offscreen and prints FreeCAD's own startup errors. End the probe with
+`FreeCADGui.getMainWindow().close()` so it exits.
+
 Remember `sys.stderr.write` — `print()` is swallowed.
 
 **FreeCAD caches imported modules.** After editing anything under `partikus/gui/`, a

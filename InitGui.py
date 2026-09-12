@@ -6,19 +6,27 @@
 # in the workbench dropdown. Without this file the add-on loads and registers
 # nothing, with no error anywhere. See Init.py for the console half.
 #
-# Run ./install.sh to create this file and symlink the repo into FreeCAD's user
-# Mod directory (App.getUserAppDataDir()/Mod/partikus).
+# KEEP THIS FILE TRIVIAL, AND DO NOT REFERENCE __file__ HERE.
+#
+# FreeCAD does not import this as a module — it compiles the source and execs it
+# in a fresh namespace that has no __file__ bound. The usual add-on first line,
+#
+#     _root = os.path.dirname(os.path.realpath(__file__))
+#
+# therefore raises NameError before reaching the import below, and the only
+# symptom is one line of startup log that scrolls past:
+#
+#     During initialization the error "name '__file__' is not defined"
+#     occurred in .../Mod/partikus/InitGui.py
+#
+# The workbench is then simply missing from the dropdown, which looks exactly
+# like "not installed". tests/test_gui_loader.py guards this.
+#
+# There is no sys.path setup either, and none is needed: FreeCAD puts every Mod
+# entry on sys.path before running this file. Adding the repo root would also
+# let tests/ and examples/ shadow those top-level names for every other add-on
+# in the process.
+#
+# Run ./install.sh to symlink the repo into FreeCAD's user Mod directory.
 
-import os
-import sys
-
-_root = os.path.dirname(os.path.realpath(__file__))
-
-# FreeCAD already puts each Mod entry on sys.path before running this file, so
-# this is a fallback for unusual load paths. Append rather than insert: the repo
-# root also contains tests/, examples/ and docs/, and putting it first would let
-# those shadow same-named top-level modules for every other add-on in the process.
-if _root not in sys.path:
-    sys.path.append(_root)
-
-import partikus.gui.workbench  # noqa: F401,E402  — registers the workbench
+import partikus.gui.workbench  # noqa: F401  — importing it registers the workbench

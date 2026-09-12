@@ -11,6 +11,26 @@ Versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+**`InitGui.py` raised `NameError` on `__file__`, so the workbench never registered**
+(`InitGui.py`, `tests/test_gui_loader.py`)
+- FreeCAD does not import the loaders as modules — it compiles each one and `exec`s it in
+  a fresh namespace with **no `__file__` bound**. `os.path.dirname(os.path.realpath(
+  __file__))` therefore raised before the file reached its workbench import, FreeCAD
+  skipped the add-on, and the only trace was one line of startup log: *During
+  initialization the error "name '__file__' is not defined" occurred in
+  .../Mod/partikus/InitGui.py*. The dropdown then looks exactly like "not installed".
+- The `sys.path` setup that line served is unnecessary: FreeCAD puts every Mod entry on
+  `sys.path` before running the loader, which is why `fasteners/InitGui.py` and other
+  well-behaved add-ons import their package directly. `InitGui.py` is now that one import.
+- Verified in a real offscreen GUI session against FreeCAD 1.1.3: 21 → 22 registered
+  workbenches, `PartikusWorkbench` present, no startup error.
+- `tests/test_gui_loader.py` execs both loaders in a namespace without `__file__`, exactly
+  the way FreeCAD does, and fails with FreeCAD's own error message if the idiom returns.
+  6 new tests → **756 total, all passing**.
+- Note for headless work: under `freecadcmd`, `FreeCADGui` imports but is a stub without
+  `addCommand` or `listWorkbenches`, so `HAS_GUI` is `True` and registration still cannot
+  be tested there. Use the GUI binary offscreen.
+
 **FreeCAD workbench never loaded on FreeCAD 1.x** (`Init.py`, `InitGui.py`, `install.sh`,
 `partikus/gui/workbench.py`, `partikus/gui/auto_dialog.py`)
 - Three independent defects, each of which alone left the workbench absent from the
