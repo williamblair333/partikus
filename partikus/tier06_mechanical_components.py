@@ -211,18 +211,22 @@ def bevel_gear(teeth=20, module=1.0, cone_angle_deg=45, thickness=10.0):
 
 # ── Rack ──────────────────────────────────────────────────────────────────────
 
-def rack(teeth=10, module=1.0, length=None, height=None):
+def rack(teeth=10, module=1.0, width=None, length=None, height=None):
     """
     Gear rack: flat bar with trapezoidal teeth on top (20° pressure angle).
 
     Args:
         teeth:  number of teeth
         module: gear module (mm)
+        width:  face width — the thickness along Y, the direction the teeth run
+                (mm); default = 10 × module, the usual 8–12×m range for a gear
+                face, which is what the mating spur_gear should also use
         length: total rack length (mm); default = teeth × π × module
-        height: rack height below the pitch line (mm); default = 2 × module
+        height: rack height below the pitch line (mm); default = 2.5 × module
 
     Example:
-        rack(teeth=12, module=2)
+        rack(teeth=12, module=2)              # 20 mm face width
+        rack(teeth=12, module=2, width=8)     # to match an 8 mm-wide gear
     """
     cp = math.pi * module           # circular pitch
     addendum = module
@@ -231,9 +235,14 @@ def rack(teeth=10, module=1.0, length=None, height=None):
 
     L = length if length is not None else teeth * cp
     H = height if height is not None else 2.5 * module  # full tooth height below datum
+    # Face width was hardcoded at 1.0 mm until 2026-09-12, which made every rack
+    # a sliver you could not see the teeth on, let alone mesh or print.
+    W = width if width is not None else 10.0 * module
+    if W <= 0:
+        raise ValueError(f"width must be positive, got {W}")
 
-    hh_h = H / 2
     half_L = L / 2
+    half_W = W / 2
 
     # Build the 2D profile of one tooth (trapezoidal, symmetric about x=0)
     # tooth at the datum line (y=0): half-width = cp/4 at datum, narrows toward tip
@@ -242,13 +251,9 @@ def rack(teeth=10, module=1.0, length=None, height=None):
 
     tooth_hw_tip = max(tooth_hw_tip, 0.05 * module)    # avoid degenerate tip
 
-    # Build rack body + teeth as a compound of box + N tooth prisms
-    body = Part.makeBox(L, 1.0, H, _V(-half_L, -0.5, -H - addendum))
-
-    # We'll use a 2D profile + extrude in Y to make a full rack solid
-    # Profile in XZ plane at y=0, closed:
-    # Bottom of rack at z = -(H + addendum), top of teeth at z = addendum
-    # Build one period, then array
+    # Each tooth is a closed trapezoidal profile in the XZ plane, extruded the
+    # full face width in Y. Profile runs from z = -dedendum up to z = +addendum;
+    # the base below it carries them.
     tooth_shapes = []
     for i in range(teeth):
         cx = -half_L + cp / 2 + i * cp   # centre of this tooth
@@ -259,16 +264,16 @@ def rack(teeth=10, module=1.0, length=None, height=None):
             (cx - tooth_hw_tip,   addendum),
             (cx - tooth_hw_root, -dedendum),
         ]
-        pts = [_V(x, 0, z) for (x, z) in pts_xz]
+        pts = [_V(x, -half_W, z) for (x, z) in pts_xz]
         wire = Part.makePolygon(pts)
         face = Part.Face(wire)
-        tooth_shapes.append(face.extrude(_V(0, 1.0, 0)))
+        tooth_shapes.append(face.extrude(_V(0, W, 0)))
 
     # Rack body (rectangular base) goes from z=-(H+addendum) to z=-dedendum
     base_h = H - dedendum
     if base_h > 0:
-        base = Part.makeBox(L, 1.0, base_h,
-                            _V(-half_L, -0.5, -(H + addendum)))
+        base = Part.makeBox(L, W, base_h,
+                            _V(-half_L, -half_W, -(H + addendum)))
         all_shapes = [base] + tooth_shapes
     else:
         all_shapes = tooth_shapes

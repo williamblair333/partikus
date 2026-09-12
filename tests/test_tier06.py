@@ -112,6 +112,35 @@ def test_rack_anchors():
     r = rack(10, 2)
     assert r.anchors["CENTER"] is not None
 
+def test_rack_face_width_defaults_to_ten_module():
+    # Face width was hardcoded at 1.0 mm, which made every rack a sliver with
+    # teeth too thin to see, mesh or print. 10 x module is mid-range for a gear
+    # face and matches what the mating spur_gear should use.
+    assert _approx(rack(10, 2).shape.BoundBox.YLength, 20.0, tol=0.01)
+    assert _approx(rack(10, 1).shape.BoundBox.YLength, 10.0, tol=0.01)
+
+def test_rack_face_width_is_settable():
+    assert _approx(rack(10, 2, width=8.0).shape.BoundBox.YLength, 8.0, tol=0.01)
+
+def test_rack_is_centred_on_the_face_width():
+    bb = rack(10, 2, width=8.0).shape.BoundBox
+    assert _approx(bb.YMin, -4.0, tol=0.01)
+    assert _approx(bb.YMax, 4.0, tol=0.01)
+
+def test_rack_volume_scales_with_face_width():
+    # The teeth must extrude the full width too, not just the base.
+    narrow = rack(10, 2, width=5.0).shape.Volume
+    wide   = rack(10, 2, width=10.0).shape.Volume
+    assert _approx(wide, 2 * narrow, tol=narrow * 0.01)
+
+def test_rack_rejects_non_positive_width():
+    for bad in (0.0, -3.0):
+        try:
+            rack(10, 2, width=bad)
+        except ValueError:
+            continue
+        raise AssertionError(f"width={bad} should raise, not build a degenerate rack")
+
 
 # ── pulley_timing ─────────────────────────────────────────────────────────────
 
