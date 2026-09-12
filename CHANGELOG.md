@@ -36,6 +36,26 @@ Versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+**Pathfinder 1E burst-template example** (`examples/pf1e_burst_templates.py`, `tests/test_pf1e_templates.py`)
+- Printable 10/20/30 ft area-of-effect ring templates for a 1-inch battlemat, driven by
+  two module-level switches: `OUTLINE` (`"circle"` literal-scale annulus, default, or
+  `"grid"` stepped outline of the rules-exact affected squares) and `CENTER_ON`
+  (`"square"` emanation or `"intersection"` burst).
+- `pf1e_distance()` implements the 1-2-1 diagonal rule; `cell_set()` derives the affected
+  squares from it. The circle under-covers the diagonals by construction — the build log
+  reports how many squares each ring misses rather than hiding the compromise.
+- Rings wider than `BED_MM` are quartered on the cardinal axes; the four quarters are
+  congruent under 90° rotation, so only one segment is exported. Bowtie joint keys press-fit
+  the seams (`KEY_CLEAR` per-face allowance); four radial pads carry the joints, the
+  radius-label through-holes, and the inward tips used to centre the mini.
+- `corner_patches()` fills the concave corners of the grid staircase, where two inset bars
+  would otherwise meet along a single edge and refuse to fuse — the failure mode that
+  exports as several disjoint solids and falls apart in the slicer.
+- `verify()` gates every export on `isValid()` and exactly one solid, since `to_stl()` will
+  happily tessellate a degenerate boolean.
+- 33 new tests covering the distance rule, both outlines, the split/socket path, and the
+  guard that importing the example does not build and export → **750 total, all passing**.
+
 **Visual regression tests** (`tests/test_visual_regression.py`, `tests/baselines/`)
 - Renders deterministic reference surfaces (a flat grid and a smooth Gaussian dome) through
   `analyze_zebra` / `analyze_reflection` and compares the PNG output, pixel-for-pixel, against
