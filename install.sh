@@ -103,6 +103,61 @@ fi
 # Resolve AppRun path for GUI mode (AppImage only)
 APPRUN="$SCRIPT_DIR/squashfs-root/AppRun"
 
+# ── Install the workbench into FreeCAD's user Mod directory ───────────────────
+#
+# FreeCAD only ever runs partikus/gui/workbench.py by executing InitGui.py from
+# the root of a directory on its Mod path. Until this step existed the workbench
+# could not appear in the dropdown no matter what the registration code did.
+
+heading "FreeCAD workbench"
+
+# The two loader files are tracked in the repo — this script does not generate
+# them, so there is one copy and it cannot drift from what git has.
+for loader in Init.py InitGui.py; do
+    [[ -f "$SCRIPT_DIR/$loader" ]] \
+        || die "$loader is missing from $SCRIPT_DIR — FreeCAD loads the add-on by
+    that exact filename and skips the directory silently without it.
+    Restore it with: git checkout -- $loader"
+done
+
+# Ask FreeCAD where its user Mod directory is. Never guess: the path is stamped
+# with the minor version (v1-1, v1-2, ...) and a wrong one installs into a
+# directory FreeCAD does not read, with no error at any point.
+#
+# freecadcmd captures stdout, so the probe writes to stderr.
+MOD_PARENT=""
+PROBE=$(mktemp /tmp/partikus_moddir_XXXXXX.py)
+printf 'import FreeCAD, sys\nsys.stderr.write("USERAPPDATA=" + FreeCAD.getUserAppDataDir() + "\\n")\n' > "$PROBE"
+MOD_PARENT=$("$FREECADCMD" "$PROBE" 2>&1 | sed -n 's/^USERAPPDATA=//p' | head -1 || true)
+rm -f "$PROBE"
+MOD_PARENT="${MOD_PARENT%/}"
+
+if [[ -z "$MOD_PARENT" || ! -d "$MOD_PARENT" ]]; then
+    warn "Could not determine FreeCAD's user app data directory — workbench NOT installed."
+    warn "The headless API still works. To install it by hand, run FreeCAD's Python console:"
+    warn "    import FreeCAD; FreeCAD.getUserAppDataDir()"
+    warn "then: ln -sfn '$SCRIPT_DIR' <that path>/Mod/partikus"
+else
+    MOD_DIR="$MOD_PARENT/Mod"
+    LINK="$MOD_DIR/partikus"
+    mkdir -p "$MOD_DIR"
+
+    if [[ -d "$LINK" && ! -L "$LINK" ]]; then
+        # A real directory here is someone else's install (Addon Manager, a
+        # manual copy). Linking into it would nest partikus/partikus and load
+        # neither cleanly, so leave it alone and say so.
+        warn "$LINK is a real directory, not a link — leaving it untouched."
+        warn "Remove or rename it and re-run install.sh to link this checkout instead."
+    else
+        ln -sfn "$SCRIPT_DIR" "$LINK"
+        ok "Workbench installed: $LINK -> $SCRIPT_DIR"
+        printf '     Restart FreeCAD, then pick "Partikus" from the workbench dropdown.\n'
+        printf '     Re-run this script after a FreeCAD upgrade — the Mod path is\n'
+        printf '     version-stamped, and an upgrade leaves the workbench behind.\n'
+        printf '     To uninstall: rm %s\n' "$LINK"
+    fi
+fi
+
 heading "Setup complete"
 printf '\n'
 printf '  Run examples (headless):\n'
