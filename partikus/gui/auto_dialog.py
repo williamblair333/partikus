@@ -10,6 +10,18 @@ module keeps working across the Qt5 -> Qt6 change.
 import inspect
 from typing import get_type_hints, Literal, get_args, get_origin
 
+# Sentinel: this parameter has no default at all, as distinct from one whose
+# default is None. Collapsing the two is what made every optional parameter
+# arrive at the geometry call as 0.0 — see _make_widget.
+_NO_DEFAULT = object()
+
+# Spin-box value meaning "leave this to the function". Deliberately far below
+# any real dimension: parameters that accept None here are diameters, depths,
+# lengths and pitches, none of which is ever negative, let alone -1e6 mm.
+# Changing this to something inside the usable range makes a typed value read
+# as unset. tests/test_auto_dialog.py pins the round-trip.
+_AUTO = -1.0e6
+
 try:
     from PySide import QtWidgets, QtCore
     import FreeCAD
@@ -74,7 +86,10 @@ def _build_dialog(fn):
             continue
 
         annotation = hints.get(name)
-        default    = param.default if param.default is not inspect.Parameter.empty else None
+        # _NO_DEFAULT, not None: "no default" and "defaults to None" are
+        # different parameters and need different widgets.
+        default    = (param.default if param.default is not inspect.Parameter.empty
+                      else _NO_DEFAULT)
         widget     = _make_widget(annotation, default)
         form.addRow(_humanize(name) + ":", widget)
         widgets[name] = widget
@@ -93,16 +108,23 @@ def _build_dialog(fn):
     def get_values():
         out = {}
         for name, w in widgets.items():
+            # Widgets built for a None-defaulted parameter carry this flag and
+            # can return None. DO NOT REMOVE the two checks below: without them
+            # every optional parameter arrives as 0.0, which is a real value to
+            # a function branching on `is not None`, and produces a zero-radius
+            # cylinder or a crash rather than the documented default.
+            optional = bool(w.property("partikus_optional"))
             if isinstance(w, QtWidgets.QDoubleSpinBox):
-                out[name] = w.value()
+                out[name] = None if (optional and w.value() == w.minimum()) else w.value()
             elif isinstance(w, QtWidgets.QSpinBox):
-                out[name] = w.value()
+                out[name] = None if (optional and w.value() == w.minimum()) else w.value()
             elif isinstance(w, QtWidgets.QCheckBox):
                 out[name] = w.isChecked()
             elif isinstance(w, QtWidgets.QComboBox):
                 out[name] = w.currentText()
             else:
-                out[name] = w.text()
+                text = w.text()
+                out[name] = None if (optional and not text.strip()) else text
         return out
 
     dlg.get_values = get_values
@@ -119,6 +141,29 @@ def _make_widget(annotation, default):
         if default is not None:
             idx = next((i for i, c in enumerate(choices) if str(c) == str(default)), 0)
             w.setCurrentIndex(idx)
+        return w
+
+    # default is None → the parameter is OPTIONAL: the function derives it, and
+    # the dialog must be able to say "not given". Every one of these reads as
+    # `if x is not None:` inside the geometry code, so passing 0.0 is not a
+    # harmless approximation — it is a different branch. Measured before this
+    # branch existed: cone and rack crashed, standoff raised "No ISO data for
+    # M0", and cylinder, sphere, torus, disk, hemisphere and bearing_pocket all
+    # returned invalid zero-volume solids with no error at all.
+    if default is None:
+        if annotation is str:
+            w = QtWidgets.QLineEdit()
+            w.setPlaceholderText("auto — leave blank")
+            w.setProperty("partikus_optional", True)
+            return w
+        w = QtWidgets.QDoubleSpinBox()
+        w.setRange(_AUTO, 100_000.0)
+        w.setDecimals(3)
+        w.setSuffix(" mm")
+        w.setSingleStep(0.5)
+        w.setSpecialValueText("auto")   # shown instead of the sentinel number
+        w.setValue(_AUTO)               # start at "auto"
+        w.setProperty("partikus_optional", True)
         return w
 
     # str → QComboBox for face anchors, QLineEdit otherwise.

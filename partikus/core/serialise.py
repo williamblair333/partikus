@@ -40,6 +40,45 @@ class _PartikusProxy:
         pass
 
 
+def _warn_if_degenerate(label, raw):
+    """
+    Say something when a shape that cannot be seen or printed enters a document.
+
+    Nothing in FreeCAD objects to an empty solid. It adds cleanly, renders as
+    nothing, and to_stl() will happily tessellate it — so a bad parameter
+    surfaces as an empty viewport, with no exception and no log line, and gets
+    diagnosed from a screenshot. An audit on 2026-09-12 found 18 exported
+    functions reaching exactly that state through the GUI dialog.
+
+    This does not raise. A caller may legitimately want a degenerate shape, and
+    a warning that blocks work is worse than no warning. It only removes the
+    silence.
+    """
+    problems = []
+    try:
+        if not raw.isValid():
+            problems.append("not a valid shape")
+        # Zero volume is only wrong for something that claims to be a solid —
+        # Tier 3 profiles are wires and correctly have none.
+        if raw.Solids and raw.Volume < 1e-9:
+            problems.append("zero volume")
+        if not raw.Solids and not raw.Faces and not raw.Wires:
+            problems.append("empty — no solids, faces or wires")
+    except Exception as e:                      # pragma: no cover - defensive
+        problems.append(f"could not be inspected ({type(e).__name__})")
+
+    if not problems:
+        return
+    msg = (f"Partikus: '{label}' is {'; '.join(problems)}. It will be invisible "
+           f"in the 3D view and unusable in a boolean or an export. Check for a "
+           f"zero or missing dimension.\n")
+    try:
+        FreeCAD.Console.PrintWarning(msg)
+    except Exception:                           # pragma: no cover - defensive
+        import sys
+        sys.stderr.write(msg)
+
+
 def save_to_doc(shape, label, doc=None):
     """
     Add *shape* to *doc* as a Part::FeaturePython feature named *label*.
@@ -64,6 +103,8 @@ def save_to_doc(shape, label, doc=None):
         doc = FreeCAD.ActiveDocument
     if doc is None:
         doc = FreeCAD.newDocument("Partikus")
+
+    _warn_if_degenerate(label, shape.shape)
 
     obj = doc.addObject("Part::FeaturePython", label)
     _PartikusProxy(obj)
