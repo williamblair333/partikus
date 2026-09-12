@@ -73,22 +73,25 @@ dovetail_slot(length, narrow_width, wide_width, height)
 snap_clip(length, width, hook_height, flex_arm_length)
 
 **Fasteners** (ISO metric; diameter is the nominal M-size, e.g. 6 = M6)
+Every dimension below is looked up from the ISO tables. Each also takes optional
+overrides for a non-standard part — omit them unless the description calls for
+something off-standard, and never pass them as zero.
 threaded_rod(diameter, length)
-hex_bolt(diameter, length)
-socket_head_bolt(diameter, length)
-button_head_bolt(diameter, length)
-flat_head_bolt(diameter, length)
-hex_nut(diameter)
-flat_washer(bolt_diameter)
-lock_washer(bolt_diameter)
+hex_bolt(diameter, length, across_flats, head_height)
+socket_head_bolt(diameter, length, head_diameter, head_height)
+button_head_bolt(diameter, length, head_diameter, head_height)
+flat_head_bolt(diameter, length, head_diameter, head_angle_deg)
+hex_nut(diameter, across_flats, height)       — a jam nut is roughly half height
+flat_washer(bolt_diameter, inner_diameter, outer_diameter, thickness)
+lock_washer(bolt_diameter, inner_diameter, outer_diameter, thickness)
 standoff(diameter, length)
 dowel_pin(diameter, length)
-clearance_hole(bolt_size="M6", depth)         — bolt_size is a string like "M6"
+clearance_hole(bolt_size="M6", depth, hole_diameter)  — bolt_size is a string like "M6"
 
 **Mechanical components**
 spur_gear(teeth, module, thickness, pressure_angle_deg=20)
 bevel_gear(teeth, module, cone_angle_deg, thickness)
-rack(teeth, module, length, height)
+rack(teeth, module, width, length, height)    — width is the face width, ~10x module
 pulley_timing(teeth, belt_type="GT2", width)
 sprocket(teeth, chain_pitch, thickness)
 shaft_coupling(shaft1_diameter, shaft2_diameter, length)

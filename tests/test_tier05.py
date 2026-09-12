@@ -295,3 +295,104 @@ def test_dowel_pin_volume():
 def test_dowel_pin_anchors():
     d = dowel_pin(6, 30)
     assert _approx(d.anchors["TOP"].z, 15.0, tol=0.1)
+
+
+# ── Dimension overrides ───────────────────────────────────────────────────────
+#
+# Every fastener here used to be sized entirely from its nominal thread size.
+# That is right for a standard part and useless for a fender washer, a jam nut,
+# a low-head cap screw, or a supplier's part that is 0.3 mm off the ISO figure.
+# None keeps the ISO value, so these are additive and existing calls are
+# unchanged — the first test in this block is the one that pins that.
+
+def test_overrides_default_to_the_iso_figures():
+    # An override left as None must produce byte-for-byte the old geometry.
+    assert _approx(flat_washer(6).shape.Volume,
+                   flat_washer(6, None, None, None).shape.Volume, tol=1e-6)
+    assert _approx(hex_nut(6).shape.Volume,
+                   hex_nut(6, None, None, None).shape.Volume, tol=1e-6)
+    assert _approx(hex_bolt(6, 25).shape.Volume,
+                   hex_bolt(6, 25, None, None, None).shape.Volume, tol=1e-6)
+
+def test_fender_washer_by_override():
+    w = flat_washer(6, outer_diameter=25.0, thickness=2.0)
+    bb = w.shape.BoundBox
+    assert _approx(bb.XLength, 25.0, tol=0.01)
+    assert _approx(bb.ZLength, 2.0, tol=0.01)
+
+def test_washer_bore_override():
+    w = flat_washer(6, inner_diameter=8.0, outer_diameter=20.0, thickness=1.5)
+    expected = math.pi * (10.0 ** 2 - 4.0 ** 2) * 1.5
+    assert _approx(w.shape.Volume, expected, tol=expected * 0.01)
+
+def test_washer_rejects_bore_wider_than_outside():
+    try:
+        flat_washer(6, inner_diameter=30.0, outer_diameter=20.0)
+    except ValueError as e:
+        assert "smaller" in str(e)
+        return
+    raise AssertionError("a bore wider than the washer should raise, not invert")
+
+def test_jam_nut_by_height_override():
+    standard = hex_nut(6).shape.BoundBox.ZLength
+    jam = hex_nut(6, height=3.0).shape.BoundBox.ZLength
+    assert _approx(jam, 3.0, tol=0.01)
+    assert jam < standard
+
+def test_nut_rejects_across_flats_inside_the_thread():
+    try:
+        hex_nut(6, across_flats=4.0)
+    except ValueError as e:
+        assert "across_flats" in str(e)
+        return
+    raise AssertionError("across_flats smaller than the thread should raise")
+
+def test_low_head_cap_screw_by_override():
+    tall = socket_head_bolt(6, 20).shape.BoundBox.ZLength
+    low = socket_head_bolt(6, 20, head_diameter=8.5, head_height=3.5)
+    assert low.shape.BoundBox.ZLength < tall
+    assert _approx(low.shape.BoundBox.XLength, 8.5, tol=0.01)
+
+def test_hex_bolt_across_flats_override():
+    b = hex_bolt(6, 25, across_flats=11.0)
+    bb = b.shape.BoundBox
+    # _hex_prism puts the first vertex at 30 degrees, so X spans the flats and
+    # Y spans the corners — A/F and A/F / cos(30).
+    assert _approx(bb.XLength, 11.0, tol=0.05)
+    assert _approx(bb.YLength, 11.0 / math.cos(math.radians(30)), tol=0.05)
+
+def test_imperial_countersink_angle():
+    iso = flat_head_bolt(6, 20).shape.BoundBox.ZLength
+    imperial = flat_head_bolt(6, 20, head_angle_deg=82).shape.BoundBox.ZLength
+    # A shallower included angle makes a taller head for the same diameter.
+    assert imperial > iso
+
+def test_flat_head_rejects_impossible_angle():
+    for bad in (0.0, 180.0, 200.0):
+        try:
+            flat_head_bolt(6, 20, head_angle_deg=bad)
+        except ValueError:
+            continue
+        raise AssertionError(f"head_angle_deg={bad} should raise")
+
+def test_clearance_hole_exact_diameter_override():
+    h = clearance_hole("M6", depth=15, hole_diameter=6.6)
+    assert _approx(h.shape.BoundBox.XLength, 6.6, tol=0.01)
+
+def test_heat_set_pocket_override():
+    p = heat_set_insert_pocket("M3", outer_diameter=4.0, length=5.7)
+    assert _approx(p.shape.BoundBox.XLength, 4.0, tol=0.01)
+    assert _approx(p.shape.BoundBox.ZLength, 5.7, tol=0.01)
+
+def test_overrides_reject_non_positive_values():
+    # A zero-thickness washer is invalid geometry that renders as nothing —
+    # the silent failure this project has spent a session removing.
+    for call in (lambda: flat_washer(6, thickness=0.0),
+                 lambda: flat_washer(6, outer_diameter=-5.0),
+                 lambda: hex_nut(6, height=0.0),
+                 lambda: socket_head_bolt(6, 20, head_height=-1.0)):
+        try:
+            call()
+        except ValueError:
+            continue
+        raise AssertionError("a non-positive override should raise")

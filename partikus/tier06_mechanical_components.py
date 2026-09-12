@@ -344,22 +344,31 @@ def sprocket(teeth=16, chain_pitch=12.7, thickness=5.0):
 
 # ── Bearing pocket ────────────────────────────────────────────────────────────
 
-def bearing_pocket(bearing_id="608", depth=None):
+def bearing_pocket(bearing_id="608", depth=None, outer_diameter=None):
     """
     Cylindrical pocket to receive a standard ball bearing.
 
+    CUTTER — this is the negative volume. Subtract it from your part.
+
     Args:
-        bearing_id: ISO bearing designation, e.g. "608", "6004"
-        depth:      pocket depth (mm); defaults to bearing width
+        bearing_id:     ISO bearing designation, e.g. "608", "6004"
+        depth:          pocket depth (mm); None = the bearing's width
+        outer_diameter: pocket diameter; None = the bearing's OD. Add a few
+                        hundredths for a slip fit, subtract for a press fit —
+                        on a printed part the nominal OD is usually too tight.
 
     Example:
-        bearing_pocket("608")          # 8mm bore, 22mm OD, 7mm wide
+        bearing_pocket("608")                            # 8 bore, 22 OD, 7 wide
         bearing_pocket("6004", depth=10)
+        bearing_pocket("608", outer_diameter=22.2)       # printed, slip fit
     """
     from .presets.bearings import lookup_bearing
     dims = lookup_bearing(bearing_id)
-    od = dims["od"]
+    od = outer_diameter if outer_diameter is not None else dims["od"]
     d = depth if depth is not None else dims["width"]
+    if od <= 0 or d <= 0:
+        raise ValueError(
+            f"outer_diameter ({od}) and depth ({d}) must both be positive")
     hh = d / 2
     raw = Part.makeCylinder(od / 2, d, _V(0, 0, -hh))
     return _bb_result(raw)
