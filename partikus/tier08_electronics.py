@@ -6,6 +6,8 @@ boards, LEDs, connectors. All shapes centred at origin. All dimensions in mm.
 """
 
 import math
+from typing import Literal
+
 import FreeCAD
 import Part
 
@@ -93,7 +95,10 @@ _RPI_DIMS = {
     "Zero2":(65.0, 30.0, 1.6, [(3.5, 3.5), (61.5, 3.5), (3.5, 26.5), (61.5, 26.5)]),
 }
 
-def raspberry_pi_mount(model="4B", standoff_height=8.0, hole_diameter=2.9):
+def raspberry_pi_mount(
+    model: Literal["3B", "3B+", "4B", "5", "Zero", "Zero2"] = "4B",
+    standoff_height=8.0, hole_diameter=2.9,
+):
     """
     Mounting plate with four standoffs matching Raspberry Pi hole pattern.
 
@@ -143,7 +148,10 @@ _ARDUINO_DIMS = {
     "micro":     (43.2, 18.0, 1.6, [(1.5, 1.5), (41.5, 1.5), (1.5, 16.5), (41.5, 16.5)]),
 }
 
-def arduino_mount(model="uno", standoff_height=8.0, hole_diameter=3.2):
+def arduino_mount(
+    model: Literal["uno", "mega", "nano", "leonardo", "micro"] = "uno",
+    standoff_height=8.0, hole_diameter=3.2,
+):
     """
     Mounting plate with standoffs matching Arduino hole pattern.
 
@@ -223,7 +231,11 @@ _USB_DIMS = {
     "Mini-USB":  (7.4,  3.8),
 }
 
-def usb_cutout(connector_type="USB-C", panel_thickness=2.0, clearance=0.3):
+def usb_cutout(
+    connector_type: Literal["USB-A", "USB-B", "USB-C",
+                            "Micro-USB", "Mini-USB"] = "USB-C",
+    panel_thickness=2.0, clearance=0.3,
+):
     """
     Rectangular panel cutout for a USB connector.
 
@@ -254,7 +266,8 @@ _HDMI_DIMS = {
     "micro": (6.4,  2.8),
 }
 
-def hdmi_cutout(connector_type="full", panel_thickness=2.0, clearance=0.3):
+def hdmi_cutout(connector_type: Literal["full", "mini", "micro"] = "full",
+                panel_thickness=2.0, clearance=0.3):
     """
     Panel cutout for an HDMI connector.
 
@@ -304,7 +317,8 @@ _DIN_DIMS = {
     "15mm": (15.0, 5.5, 1.0),
 }
 
-def din_rail_clip(rail_type="35mm", clip_length=40.0, wall_thickness=2.5):
+def din_rail_clip(rail_type: Literal["35mm", "15mm"] = "35mm",
+                  clip_length=40.0, wall_thickness=2.5):
     """
     Snap-on clip body that mounts to a standard DIN rail.
 

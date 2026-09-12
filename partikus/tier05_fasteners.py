@@ -9,6 +9,8 @@ Shapes are centred at origin. All dimensions in mm.
 """
 
 import math
+from typing import Literal
+
 import FreeCAD
 import Part
 
@@ -102,7 +104,8 @@ def _override(value, preset, label):
 
 # ── Threaded rod ──────────────────────────────────────────────────────────────
 
-def threaded_rod(diameter=6.0, length=20.0, pitch=None, thread_form="metric"):
+def threaded_rod(diameter=6.0, length=20.0, pitch=None,
+                 thread_form: Literal["metric"] = "metric"):
     """
     Cosmetic threaded rod: smooth cylinder at nominal diameter.
 
@@ -412,14 +415,18 @@ def heat_set_insert_pocket(insert_size="M3", outer_diameter=None, length=None):
 
 # ── Clearance hole ────────────────────────────────────────────────────────────
 
-def clearance_hole(bolt_size="M6", depth=10.0, fit="close", hole_diameter=None):
+def clearance_hole(bolt_size="M6", depth=10.0,
+                   fit: Literal["close", "normal", "loose"] = "close",
+                   hole_diameter=None):
     """
     Through-hole sized for bolt clearance (ISO 273).
 
     CUTTER — this is the negative volume. Subtract it from your part.
 
     Args:
-        bolt_size:     nominal bolt size, e.g. "M6" or "M6x1.0"
+        bolt_size:     nominal bolt size, e.g. "M6" or "M6x1.0". Left as free
+                       text rather than a fixed choice list because parse_size
+                       accepts both forms — it is a parsed format, not an enum.
         depth:         hole depth (mm)
         fit:           "close", "normal", or "loose"
         hole_diameter: exact diameter, overriding the ISO fit class. Useful for

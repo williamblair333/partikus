@@ -7,6 +7,8 @@ checking. All shapes centred at origin. All dimensions in mm.
 """
 
 import math
+from typing import Literal
+
 import FreeCAD
 import Part
 
@@ -287,7 +289,7 @@ def rack(teeth=10, module=1.0, width=None, length=None, height=None):
 
 # ── Timing pulley ─────────────────────────────────────────────────────────────
 
-def pulley_timing(teeth=20, belt_type="GT2", width=7.0):
+def pulley_timing(teeth=20, belt_type: Literal["GT2", "HTD"] = "GT2", width=7.0):
     """
     Timing pulley: smooth cylinder at the correct pitch diameter.
 
@@ -344,7 +346,16 @@ def sprocket(teeth=16, chain_pitch=12.7, thickness=5.0):
 
 # ── Bearing pocket ────────────────────────────────────────────────────────────
 
-def bearing_pocket(bearing_id="608", depth=None, outer_diameter=None):
+def bearing_pocket(
+    bearing_id: Literal[
+        "606", "607", "608", "609",
+        "6000", "6001", "6002", "6003", "6004", "6005", "6006", "6007", "6008",
+        "6200", "6201", "6202", "6203", "6204", "6205", "6206", "6207", "6208",
+        "6300", "6301", "6302", "6303", "6304", "6305", "6306", "6307", "6308",
+    ] = "608",
+    depth=None,
+    outer_diameter=None,
+):
     """
     Cylindrical pocket to receive a standard ball bearing.
 

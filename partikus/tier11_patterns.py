@@ -6,6 +6,8 @@ Use with difference() to punch arrays of holes, or union() to fuse.
 """
 
 import math
+from typing import Literal
+
 import FreeCAD
 import Part
 
@@ -159,7 +161,7 @@ def polar_array(shape, count, radius, center_axis=None, full_angle_deg=360):
 
 # ── Mirror ────────────────────────────────────────────────────────────────────
 
-def mirror(shape, plane="XY"):
+def mirror(shape, plane: Literal["XY", "XZ", "YZ"] = "XY"):
     """
     Reflect *shape* through *plane* and return both the original and mirrored copy.
 

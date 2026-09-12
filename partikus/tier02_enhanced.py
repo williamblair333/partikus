@@ -6,6 +6,8 @@ All shapes centered at origin. All dimensions in mm.
 """
 
 import math
+from typing import Literal
+
 import FreeCAD
 import Part
 
@@ -80,7 +82,8 @@ def chamfered_box(length=10.0, width=10.0, height=10.0, chamfer_size=1.0, edges=
 # ── Rounded cylinder ──────────────────────────────────────────────────────────
 
 def rounded_cylinder(diameter=10.0, height=20.0, fillet_radius=1.0,
-                     ends="BOTH", *, radius=None):
+                     ends: Literal["BOTH", "TOP", "BOTTOM"] = "BOTH",
+                     *, radius=None):
     """
     Cylinder with filleted rim edge(s).
 
@@ -148,8 +151,9 @@ def tube_by_wall(outer_diameter=20.0, wall_thickness=3.0, height=20.0):
 
 # ── Hollow box ────────────────────────────────────────────────────────────────
 
-def hollow_box(length=20.0, width=20.0, height=20.0,
-               wall_thickness=2.0, open_face=TOP):
+def hollow_box(length=20.0, width=20.0, height=20.0, wall_thickness=2.0,
+               open_face: Literal["TOP", "BOTTOM", "FRONT",
+                                  "BACK", "LEFT", "RIGHT"] = TOP):
     """
     Open-topped (or open-sided) box with uniform wall thickness.
 

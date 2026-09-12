@@ -6,6 +6,8 @@ channels, vents, cutouts. All shapes centred at origin. All dimensions in mm.
 """
 
 import math
+from typing import Literal
+
 import FreeCAD
 import Part
 
@@ -170,8 +172,8 @@ def snap_fit_box(length=80.0, width=50.0, height=30.0,
 
 # ── Hinged box ────────────────────────────────────────────────────────────────
 
-def hinged_box(length=80.0, width=50.0, height=30.0,
-               wall_thickness=2.0, hinge_side="BACK"):
+def hinged_box(length=80.0, width=50.0, height=30.0, wall_thickness=2.0,
+               hinge_side: Literal["BACK", "FRONT", "LEFT", "RIGHT"] = "BACK"):
     """
     Two-piece box (base + lid) joined by a living-hinge strip on one side.
     Returns the combined open shape (base + lid flat, hinge connecting them).
@@ -280,8 +282,11 @@ _BATTERY_DIMS = {
     "CR2016": (20.0, 1.6),
 }
 
-def battery_compartment(battery_type="AA", count=1, wall_thickness=1.5,
-                        contact_clearance=2.0):
+def battery_compartment(
+    battery_type: Literal["AA", "AAA", "C", "D", "9V",
+                          "18650", "CR2032", "CR2025", "CR2016"] = "AA",
+    count=1, wall_thickness=1.5, contact_clearance=2.0,
+):
     """
     Open-ended tray sized for one or more standard batteries arranged in a row.
 
@@ -484,7 +489,8 @@ def display_window(length=40.0, width=25.0, recess_depth=0.0,
 
 # ── Button cutout ─────────────────────────────────────────────────────────────
 
-def button_cutout(diameter=12.0, panel_thickness=2.0, shape="round"):
+def button_cutout(diameter=12.0, panel_thickness=2.0,
+                  shape: Literal["round", "square"] = "round"):
     """
     Through-hole cutout for a panel-mount button or switch.
 

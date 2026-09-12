@@ -193,6 +193,75 @@ def test_degenerate_shape_is_reported_not_silent():
     assert "probe" in seen[0]
 
 
+# ── Literal annotations ──────────────────────────────────────────────────────
+#
+# A Literal[...] on a constrained string parameter is what turns a free-text box
+# into a validated dropdown — the dialog already had that branch, the signatures
+# just never used it. Several of these duplicate a preset table's keys, which is
+# unavoidable (Literal needs literals) and drifts silently the moment the table
+# gains an entry. These tests are the thing that stops that.
+
+def _literal_values(fn, param):
+    import typing
+    hints = typing.get_type_hints(fn)
+    ann = hints.get(param)
+    assert typing.get_origin(ann) is typing.Literal, (
+        f"{fn.__name__}.{param} is not annotated Literal[...] — the dialog will "
+        f"give it a free-text box instead of a validated dropdown")
+    return list(typing.get_args(ann))
+
+
+def test_literal_choices_match_their_preset_tables():
+    from partikus import tier07_enclosures as t07
+    from partikus import tier08_electronics as t08
+    from partikus.presets.bearings import BEARINGS
+
+    cases = [
+        (partikus.battery_compartment, "battery_type", list(t07._BATTERY_DIMS)),
+        (partikus.raspberry_pi_mount,  "model",        list(t08._RPI_DIMS)),
+        (partikus.arduino_mount,       "model",        list(t08._ARDUINO_DIMS)),
+        (partikus.usb_cutout,          "connector_type", list(t08._USB_DIMS)),
+        (partikus.hdmi_cutout,         "connector_type", list(t08._HDMI_DIMS)),
+        (partikus.din_rail_clip,       "rail_type",    list(t08._DIN_DIMS)),
+        (partikus.bearing_pocket,      "bearing_id",   list(BEARINGS)),
+    ]
+    for fn, param, table in cases:
+        assert _literal_values(fn, param) == table, (
+            f"{fn.__name__}.{param} choices have drifted from the preset table")
+
+
+def test_every_literal_choice_actually_builds():
+    # A choice offered in the dropdown that the function rejects is worse than
+    # no dropdown at all.
+    for fn, param in [(partikus.hdmi_cutout, "connector_type"),
+                      (partikus.usb_cutout, "connector_type"),
+                      (partikus.din_rail_clip, "rail_type"),
+                      (partikus.button_cutout, "shape"),
+                      (partikus.pulley_timing, "belt_type"),
+                      (partikus.rounded_cylinder, "ends"),
+                      (partikus.hollow_box, "open_face"),
+                      (partikus.hinged_box, "hinge_side"),
+                      (partikus.battery_compartment, "battery_type"),
+                      (partikus.raspberry_pi_mount, "model"),
+                      (partikus.arduino_mount, "model"),
+                      (partikus.bearing_pocket, "bearing_id")]:
+        for choice in _literal_values(fn, param):
+            shape = fn(**{param: choice})
+            raw = getattr(shape, "shape", shape)
+            assert raw.isValid(), f"{fn.__name__}({param}={choice!r}) is invalid"
+
+
+def test_literal_params_become_a_combo_box():
+    if not _HAS_QT:
+        return
+    dlg = ad._build_dialog(partikus.usb_cutout)
+    combos = [w for w in dlg.findChildren(QtWidgets.QComboBox)]
+    assert combos, "a Literal parameter should produce a QComboBox"
+    items = [combos[0].itemText(i) for i in range(combos[0].count())]
+    assert "USB-C" in items and "USB-A" in items
+    assert _values_for(partikus.usb_cutout)["connector_type"] == "USB-C"
+
+
 # ── Cutter marking ───────────────────────────────────────────────────────────
 #
 # workbench.py cannot be imported under freecadcmd — FreeCADGui exists there but
