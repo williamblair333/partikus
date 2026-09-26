@@ -304,6 +304,46 @@ def test_known_cutters_are_marked_and_parts_are_not():
         assert name not in names, f"{name} is a real part and must not be marked a cutter"
 
 
+# ── Commands work with no document open ──────────────────────────────────────
+#
+# A fresh FreeCAD launch lands on the Start page with no document. Commands used
+# to report IsActive() False there, so every Partikus button was greyed out and
+# nothing said why. They are now always active and the document is created on
+# OK, by _add_to_doc — so cancelling the dialog leaves no empty document behind.
+
+def test_add_to_doc_creates_a_document_when_none_is_open():
+    if not _HAS_QT:
+        return
+    import FreeCAD
+    for name in list(FreeCAD.listDocuments()):
+        FreeCAD.closeDocument(name)
+    assert FreeCAD.ActiveDocument is None
+    try:
+        ad._add_to_doc("box", partikus.box(10, 10, 10))
+        doc = FreeCAD.ActiveDocument
+        assert doc is not None, "no document was created"
+        assert [o.Name for o in doc.Objects] == ["box"]
+    finally:
+        for name in list(FreeCAD.listDocuments()):
+            FreeCAD.closeDocument(name)
+
+
+def test_commands_are_active_without_a_document():
+    # Read from source for the reason given above _cutter_names_from_source.
+    import ast
+    path = os.path.join(_ROOT, "partikus", "gui", "workbench.py")
+    with open(path) as fh:
+        tree = ast.parse(fh.read(), path)
+    methods = [n for n in ast.walk(tree)
+               if isinstance(n, ast.FunctionDef) and n.name == "IsActive"]
+    assert methods, "no IsActive method found in workbench.py"
+    for m in methods:
+        body = ast.unparse(m)
+        assert "ActiveDocument" not in body, (
+            "IsActive gates on an open document again; commands grey out on "
+            "the Start page with no explanation")
+
+
 def test_valid_profile_wire_is_not_warned_about():
     # Tier 3 profiles are wires with zero volume and that is correct.
     import FreeCAD

@@ -1,13 +1,13 @@
 # Partikus — Developer Handoff
 
 **Last updated:** 2026-09-26  
-**Status:** Milestones 1–13 complete + visual regression suite + AI-prompt expansion + PF1e template example + getting-started tutorial — 792 tests passing — **GUI workbench installs, loads, renders, and its dialogs pass correct arguments**  
-**Next milestone:** finish the GUI click-through test plan (Part Boolean + STL export), then a new tier / BRep-stub workarounds (when FreeCAD exposes the APIs)
+**Status:** Milestones 1–13 complete + visual regression suite + AI-prompt expansion + PF1e template example + getting-started tutorial — 794 tests passing — **GUI workbench installs, loads, renders, and passes its full click-through test plan**  
+**Next milestone:** a new tier / BRep-stub workarounds (when FreeCAD exposes the APIs), or the recipe pattern (§6 item 6)
 
 > **Start here if you are picking up the GUI work:** §2a below. The workbench was
-> unreachable on every FreeCAD 1.x install until 2026-09-12; three root causes are fixed
-> and committed, and the `Literal` annotation pass is done (§6 item 3). The remaining
-> work is a manual click-through test plan.
+> unreachable on every FreeCAD 1.x install until 2026-09-12. Three root causes are fixed,
+> the `Literal` annotation pass is done (§6 item 3), and the click-through test plan
+> passes end to end (§6 item 4). No GUI work is outstanding.
 
 **Repo hosting:** Primary remote is self-hosted **Gitea** — `origin` = `http://10.0.0.100:3000/bill/partikus`, `remote.pushDefault=origin`. GitHub (`github` remote → `williamblair333/partikus`) is a read-only mirror, kept current by a Gitea push mirror (sync on commit, plus every 8h) — never push to it directly. Plain `git push` goes to Gitea. `main` is protected by a local push-guard hook: land work through a feature branch and a Gitea PR (REST API; the stored git credential authenticates it). The August 2026 rewind of GitHub `main` to `f2dc1d0` is healed — as of 2026-09-26 GitHub and Gitea `main` are identical.
 
@@ -464,22 +464,23 @@ Candidate next steps (no hard blockers):
    1–8 are the ones wired into the workbench, so do those first. Prioritise over the
    hardcoded face-list heuristic in `_make_widget`, which this would make redundant.
 
-4. **Finish the GUI click-through test plan.** Everything below step 2 is untested:
-   1. ~~Restart FreeCAD, Ctrl+N, Partikus → Enhanced → Hollow Box → OK~~ — the underlying
-      defect is fixed and verified headlessly (dialog values → valid solid); confirm in
-      the GUI that the Open Face dropdown appears.
-   2. Partikus → Primitives → Cylinder → OK.
-   3. Select the cylinder → Data → Placement → offset it to overlap the box.
-   4. Part workbench → select both → Part → Boolean → Cut, then Undo and Fuse.
-      This is the step with real risk: it depends on `save_to_doc` producing a
-      `Part::FeaturePython` whose `Shape` the Part booleans accept. Unconfirmed.
-   5. File → Export → STL.
+4. ~~**GUI click-through test plan**~~ — DONE (2026-09-26). All five steps pass in a real
+   FreeCAD 1.1.1 GUI session, driven through the actual Partikus menu actions and dialogs
+   by a macro, with rendered view captures at each step:
+   1. Enhanced → Hollow Box → OK: Open Face is a dropdown (TOP…RIGHT); box renders.
+   2. Primitives → Cylinder → OK: renders.
+   3. Placement offset: use **x = 5**. The default hollow box is 20 mm, so larger
+      offsets miss it and the boolean has nothing to cut.
+   4. Part → Boolean → Cut, Undo, Fuse: both valid, volumes match `Shape.cut` /
+      `Shape.fuse` exactly (3033.6 / 4604.4 mm³), Undo restores both inputs.
+   5. File → Export → STL: closed solid mesh. The file-type list offers two STL
+      entries — pick **"STL Mesh"**; "FEM mesh formats" fails with "No FEM mesh for
+      export selected". That is FreeCAD's dialog, not Partikus.
 
-   Commands are disabled until a document exists (`_Cmd.IsActive` returns
-   `FreeCAD.ActiveDocument is not None`), and nothing tells the user why — a fresh launch
-   on the Start page shows greyed buttons with no explanation. Either auto-create a
-   document in `Activated()` (`_add_to_doc` already does) and return `True`, or add a
-   tooltip.
+   Commands used to be greyed out until a document existed, with no explanation on a
+   fresh launch. `IsActive` now returns `True`; `_add_to_doc` creates the document on
+   OK, so Cancel leaves no empty document. Verified in the GUI from a no-document start;
+   `test_commands_are_active_without_a_document` guards it.
 
 5. **New tier** — Tier 16 or domain-specific (e.g., jewellery, robotics, sheet metal)
 
@@ -677,4 +678,4 @@ If anything is failing, fix it before adding new code.
 
 ---
 
-*End of handoff. Milestones 1–13 complete + visual regression suite + AI-prompt expansion + PF1e template example + getting-started tutorial. 792 tests passing. GUI workbench installs and loads as of 2026-09-12; `Literal` annotation pass done. Next: the GUI click-through test plan.*
+*End of handoff. Milestones 1–13 complete + visual regression suite + AI-prompt expansion + PF1e template example + getting-started tutorial. 794 tests passing. GUI workbench installs, loads and passes its click-through test plan (2026-09-26); `Literal` annotation pass done. Next: a new tier, or the recipe pattern.*

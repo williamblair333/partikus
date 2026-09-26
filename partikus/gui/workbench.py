@@ -92,7 +92,10 @@ if _HAS_GUI:
             def Activated(self):
                 auto_dialog(fn)
             def IsActive(self):
-                return FreeCAD.ActiveDocument is not None
+                # Always on. A fresh launch has no document, and gating on one
+                # greyed out every button with no explanation. _add_to_doc
+                # creates the document on OK, so Cancel leaves nothing behind.
+                return True
 
         FreeCADGui.addCommand(cmd_name, _Cmd())
 
