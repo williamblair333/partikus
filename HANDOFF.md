@@ -483,6 +483,18 @@ Candidate next steps (no hard blockers):
    OK, so Cancel leaves no empty document. Verified in the GUI from a no-document start;
    `test_commands_are_active_without_a_document` guards it.
 
+   **How to drive the GUI by script** (the macros used were throwaway; the method is not):
+   run `squashfs-root/AppRun macro.py` — FreeCAD executes it after startup. In the macro,
+   start from `QTimer.singleShot(4000, main)`; find menu items by walking
+   `getMainWindow().menuBar().actions()` and call `.trigger()`; before triggering a
+   command that opens a modal dialog, arm a `QTimer.singleShot` that finds
+   `QApplication.activeModalWidget()`, inspects it and clicks OK. End with `os._exit(0)`.
+   Pitfalls hit: `widget.grab()` of the 3D view returns garbage — use
+   `activeView().saveImage()`, after ~0.5 s of `processEvents()` or the first frame is
+   blank; `Gui.export()` does not handle STL (App-level exporter) — go through File →
+   Export; pick the export filter by name, not position; `pgrep -f`/`pkill -f` with a
+   pattern from your own command line matches the shell running it.
+
 5. **New tier** — Tier 16 or domain-specific (e.g., jewellery, robotics, sheet metal)
 
 6. **Recipe pattern (discussed, not started).** The stated want is "pick a part from the

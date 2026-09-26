@@ -22,7 +22,24 @@ Versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - The document logic is `attach_objects()`, headless and covered by 13 tests; verified in a
   real FreeCAD 1.1.1 GUI including a hand-moved part and a weld.
 
+**Getting-started tutorial** (`docs/getting-started.md`, `examples/getting_started.py`,
+`examples/hand_mirror.py`)
+- A 20-minute lesson — solids, booleans, anchors, parameters — ending in a part on disk.
+  Every number it quotes was re-measured against the code. The README links it first and
+  its quick start now exports; `capped_cylinder.py` writes STEP/STL instead of only printing.
+
 ### Fixed
+
+**GUI buttons were greyed out on a fresh launch** (`partikus/gui/workbench.py`)
+- Every command reported `IsActive()` False until a document existed, and nothing said why.
+  Commands are now always active; `_add_to_doc` creates the document on OK, so Cancel
+  leaves none behind. Found and verified by the GUI click-through test plan, which now
+  passes end to end (HANDOFF §6 item 4).
+
+**`to_step([a, b])` wrote a STEP file with no geometry** (`partikus/io.py`)
+- Raw shapes were passed to `Part.export()`, which wants document objects; the result was
+  a ~1.6 kB header that read back as "shape is invalid". The test only checked size > 100
+  bytes. Now writes a compound, as `to_iges()` does; two round-trip tests guard it.
 
 **Anchors now follow a part moved by hand** (`partikus/core/serialise.py`)
 - Anchors are stored in the frame a part had when it was created. Moving it afterwards
