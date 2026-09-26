@@ -7,7 +7,8 @@ import sys, os
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from partikus import (
-    cylinder, disk, difference, stack_on, translate, TOP, BOTTOM
+    cylinder, disk, difference, union, stack_on, translate,
+    to_step, to_stl, TOP, BOTTOM
 )
 
 # Outer shell
@@ -27,8 +28,24 @@ print("Body volume :", round(body.shape.Volume, 2))
 print("Cap  volume :", round(cap.shape.Volume, 2))
 print("Cap TOP anchor:", capped.anchors[TOP])
 print("Cap BOT anchor:", capped.anchors[BOTTOM])
+
+# Export, so there is something to actually look at.
+OUT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "out")
+if not os.path.isdir(OUT):
+    os.makedirs(OUT)
+
+assembly = union(body, capped)
+step_path = os.path.join(OUT, "capped_cylinder.step")
+stl_path = os.path.join(OUT, "capped_cylinder.stl")
+to_step(assembly, step_path)
+to_stl(assembly, stl_path)
+
 print()
-print("Done — import into a FreeCAD document with:")
+print("wrote", step_path)
+print("wrote", stl_path)
+print("Open the .step in FreeCAD, or the .stl in any mesh viewer.")
+print()
+print("To load it into a live FreeCAD document instead:")
 print("  from partikus.core.document import add_shape")
 print("  add_shape(body, 'Body')")
 print("  add_shape(capped, 'Cap')")

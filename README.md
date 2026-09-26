@@ -8,11 +8,20 @@
 [![License](https://img.shields.io/badge/license-LGPL--2.1-lightgrey)](LICENSE)
 [![Milestone](https://img.shields.io/badge/milestone-13%20complete-brightgreen)](#roadmap)
 
+> **👉 New here? Start with the [Getting Started tutorial](docs/getting-started.md).**
+>
+> Twenty minutes, ends with a real part on disk you can open. This README is a
+> reference — it is organised for looking things up, not for learning the toolkit.
+
 ---
 
 ## What Is Partikus?
 
 Partikus is a **Python parametric CAD toolkit** layered on top of FreeCAD's OpenCASCADE kernel. It provides a clean, composable function API for building 3D geometry — from primitive solids through swept surfaces — with a first-class **anchor system** that lets shapes snap together without manual coordinate arithmetic.
+
+**The problem it solves.** Scripting FreeCAD directly means positioning everything by absolute coordinate. A lid sits on a box because you worked out that its Z centre is `box_height/2 + lid_thickness/2`, and that expression is now load-bearing — change the wall thickness and the arithmetic silently stops being true. Real assemblies accumulate dozens of these, and they all have to be maintained by hand.
+
+Partikus replaces the arithmetic with intent. Every shape carries named points on its surface — `TOP`, `BOTTOM`, `TOP_FRONT_RIGHT`, `BOTTOM_RIM` — and `attach(lid, box, child_anchor=BOTTOM, parent_anchor=TOP)` says *put the lid's underside on the box's top*. Change any dimension and the parts stay together, because nothing ever recorded where they were. That is what makes a model genuinely parametric rather than merely written in Python.
 
 The architecture is built for three audiences at once:
 
@@ -26,6 +35,7 @@ The architecture is built for three audiences at once:
 
 ## Table of Contents
 
+- [**Getting Started tutorial**](docs/getting-started.md) ← new users start here
 - [Quick Start](#quick-start)
 - [Examples](#examples)
 - [Architecture Overview](#architecture-overview)
@@ -42,7 +52,7 @@ The architecture is built for three audiences at once:
   - [Tier 12 — Sweep / Loft](#tier-12--sweep--loft)
   - [Tier 13 — Architectural](#tier-13--architectural)
   - [Tier 14 — Assembly & Positioning](#tier-14--assembly--positioning)
-  - [Tier 15A — NURBS Curves](#tier-15a--nurbs-curves)
+  - [Tier 15A — NURBS Curves & Surfaces](#tier-15a--nurbs-curves--surfaces)
   - [Tier 15B — Subdivision Surfaces](#tier-15b--subdivision-surfaces)
 - [Anchor System](#anchor-system)
 - [Document Serialisation](#document-serialisation)
@@ -84,11 +94,21 @@ body = box(40, 20, 10)
 hole = cylinder(diameter=8, height=15)
 part = difference(body, hole)
 
-# Stack a rounded boss on top
-from partikus import rounded_cylinder, stack_on
-boss = rounded_cylinder(diameter=12, height=6, fillet_radius=1)
-assembly = stack_on(boss, part)
+# Stack a rounded boss on top.
+# stack_on() *positions* the boss — it returns the moved boss, not a combined
+# solid — so fuse the two together with union() to get one part.
+from partikus import rounded_cylinder, stack_on, union
+boss  = rounded_cylinder(diameter=12, height=6, fillet_radius=1)
+boss  = stack_on(boss, part)
+assembly = union(part, boss)
+
+# Export — nothing appears on disk until you do this
+from partikus import to_step, to_stl
+to_step(assembly, "examples/out/quickstart.step")
+to_stl(assembly, "examples/out/quickstart.stl")
 ```
+
+> Geometry lives in memory until exported. A script that builds shapes and never calls `to_step` / `to_stl` runs cleanly and produces nothing — see [`partikus/io.py`](partikus/io.py) for the other formats (IGES, OBJ, BREP, native `.FCStd`).
 
 ### Sweep a profile along a path
 
@@ -116,6 +136,17 @@ solid   = extrude(profile, height=8)
 ---
 
 ## Examples
+
+### `examples/getting_started.py` — start here
+
+A parametric pillar mount in ~30 lines: base plate, attached pillar, bore straight
+through, exported to STEP and STL. Built step by step in the
+**[Getting Started tutorial](docs/getting-started.md)**, which this file accompanies.
+
+```bash
+./install.sh
+squashfs-root/usr/bin/freecadcmd examples/getting_started.py
+```
 
 ### `examples/rpi4_enclosure.py` — full-API showcase
 
@@ -151,7 +182,8 @@ section-by-section explanation of every design pattern used.
 
 ### `examples/capped_cylinder.py` — minimal intro
 
-A hollow cylinder with a snap-fit cap. Good first read before the enclosure example.
+A hollow cylinder with a snap-fit cap, exported to `examples/out/capped_cylinder.{step,stl}`.
+Good second read, after `getting_started.py` and before the enclosure example.
 
 ---
 
