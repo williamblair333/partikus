@@ -53,6 +53,24 @@ def test_to_step_labeled_tuples():
     to_step([(b, "Body"), (c, "Bore")], p)
     assert os.path.exists(p)
 
+def test_to_step_multi_shapes_round_trip_geometry():
+    # A file-size check passes on a STEP with no geometry in it (the header
+    # alone is ~1.6 kB), so read it back and count what actually arrived.
+    b = box(20, 20, 20)
+    c = cylinder(diameter=10, height=30)
+    p = _tmp("multi_rt.step")
+    to_step([b, c], p)
+    s = Part.read(p)
+    assert len(s.Solids) == 2
+    assert _approx(s.Volume, b.shape.Volume + c.shape.Volume, tol=1.0)
+
+def test_to_step_labeled_tuples_round_trip_geometry():
+    b = box(20, 20, 20)
+    c = cylinder(diameter=10, height=30)
+    p = _tmp("labeled_rt.step")
+    to_step([(b, "Body"), (c, "Bore")], p)
+    assert len(Part.read(p).Solids) == 2
+
 def test_to_step_nested_dir():
     b = box(20, 20, 20)
     p = _tmp("subdir/part.step")

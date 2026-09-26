@@ -74,12 +74,13 @@ def to_step(shapes, filename):
     Export one or more shapes to a STEP (.step / .stp) file.
 
     Single shapes use Part.Shape.exportStep() for maximum compatibility
-    (readable back via from_step). Multi-shape exports use Part.export(),
-    which produces a STEP assembly file.
+    (readable back via from_step). Multiple shapes are written as one
+    compound, one solid per shape, the same way to_iges() does it.
 
     Args:
         shapes:   PartikusShape, or list of PartikusShape, or list of
-                  (PartikusShape, label) tuples
+                  (PartikusShape, label) tuples. Labels are accepted but not
+                  written to the file; use save_fcstd() to keep names.
         filename: output path (e.g. "output/part.step")
 
     Example:
@@ -92,7 +93,9 @@ def to_step(shapes, filename):
     if len(items) == 1:
         items[0][0].exportStep(filename)
     else:
-        Part.export([r for r, _ in items], filename)
+        # Not Part.export(): it expects document objects, and given raw
+        # shapes it writes a valid-looking STEP with no geometry in it.
+        Part.makeCompound([r for r, _ in items]).exportStep(filename)
     return filename
 
 

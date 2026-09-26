@@ -1,7 +1,7 @@
 # Partikus — Developer Handoff
 
-**Last updated:** 2026-09-12  
-**Status:** Milestones 1–13 complete + visual regression suite + AI-prompt expansion + PF1e template example — 790 tests passing — **GUI workbench installs, loads, renders, and its dialogs pass correct arguments**  
+**Last updated:** 2026-09-26  
+**Status:** Milestones 1–13 complete + visual regression suite + AI-prompt expansion + PF1e template example + getting-started tutorial — 792 tests passing — **GUI workbench installs, loads, renders, and its dialogs pass correct arguments**  
 **Next milestone:** finish the GUI click-through test plan (Part Boolean + STL export), then a new tier / BRep-stub workarounds (when FreeCAD exposes the APIs)
 
 > **Start here if you are picking up the GUI work:** §2a below. The workbench was
@@ -9,7 +9,7 @@
 > and committed, and the remaining work is a manual click-through test plan plus the
 > `Literal` annotation pass.
 
-**Repo hosting:** Primary remote is self-hosted **Gitea** — `origin` = `http://10.0.0.100:3000/bill/partikus`, `remote.pushDefault=origin`. GitHub (`github` remote → `williamblair333/partikus`) is secondary/mirror. Plain `git push` goes to Gitea. Note: GitHub `main` was force-rewound to `f2dc1d0` on 2026-08-07 (dropped PR #1); local/Gitea `main` is the source of truth.
+**Repo hosting:** Primary remote is self-hosted **Gitea** — `origin` = `http://10.0.0.100:3000/bill/partikus`, `remote.pushDefault=origin`. GitHub (`github` remote → `williamblair333/partikus`) is a read-only mirror, kept current by a Gitea push mirror (sync on commit, plus every 8h) — never push to it directly. Plain `git push` goes to Gitea. `main` is protected by a local push-guard hook: land work through a feature branch and a Gitea PR (REST API; the stored git credential authenticates it). The August 2026 rewind of GitHub `main` to `f2dc1d0` is healed — as of 2026-09-26 GitHub and Gitea `main` are identical.
 
 This document is the single source of truth for picking up development in a new session. Read it top-to-bottom before touching any code.
 

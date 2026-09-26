@@ -17,8 +17,6 @@ Outputs to examples/out/:
 import sys, os, math
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-import Part
-
 from partikus import (
     box, rounded_box, cylinder,
     union, difference, translate,
@@ -98,10 +96,7 @@ os.makedirs(OUT, exist_ok=True)
 to_step(frame, os.path.join(OUT, "hand_mirror_frame.step"))
 to_stl(frame, os.path.join(OUT, "hand_mirror_frame.stl"), deflection=0.1)
 to_stl(glass, os.path.join(OUT, "hand_mirror_glass.stl"), deflection=0.1)
-# NOTE: to_step([...]) multi-shape path is broken in this build (Part.export
-# expects document objects, not raw shapes -> empty file). Export a compound.
-Part.Compound([frame.shape, glass.shape]).exportStep(
-    os.path.join(OUT, "hand_mirror_assembly.step"))
+to_step([frame, glass], os.path.join(OUT, "hand_mirror_assembly.step"))
 log("Wrote frame .step/.stl, glass .stl, assembly .step")
 
 # ── Software-rendered front preview (orthographic, +Z toward viewer) ──────
