@@ -11,6 +11,29 @@ Versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+**Partikus → Attach: line two parts up by named point, optionally weld them**
+(`partikus/gui/attach.py`, `partikus/gui/workbench.py`)
+- Select two Partikus parts and choose Attach (menu or the "Partikus — Assemble" toolbar).
+  Pick which part moves, which of its points meets which point on the other (dropdowns of
+  each part's own anchors, BOTTOM onto TOP by default), a gap, a spin, and whether to weld.
+  Weld fuses both into one new solid and hides the originals, as Part → Union does.
+- One undo step; a failure leaves the document untouched. A wrong selection gets a message
+  saying what to select instead of nothing happening.
+- The document logic is `attach_objects()`, headless and covered by 13 tests; verified in a
+  real FreeCAD 1.1.1 GUI including a hand-moved part and a weld.
+
+### Fixed
+
+**Anchors now follow a part moved by hand** (`partikus/core/serialise.py`)
+- Anchors are stored in the frame a part had when it was created. Moving it afterwards
+  (Placement, Edit → Transform) moved the geometry but `load_from_doc` returned the old
+  anchor positions, so anything positioned from them landed where the part used to be.
+- `save_to_doc` now also records that frame (`PartikusPlacement`, hidden), and
+  `load_from_doc` moves anchors and normals by however far the part has moved since.
+  Parts saved before this have no record and load exactly as before.
+- New `store_shape(obj, shape)` writes a shape and its anchors into an existing feature,
+  keeping the two in step; `save_to_doc` uses it.
+
 **Dimension overrides on preset-driven fasteners** (`partikus/tier05_fasteners.py`,
 `partikus/tier06_mechanical_components.py`)
 - `flat_washer(bolt_diameter=6.0)` was the entire signature; everything else came from the

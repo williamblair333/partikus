@@ -222,6 +222,26 @@ if _HAS_GUI:
         for _name, _fn in _tier:
             _register(_name, _fn)
 
+    # ── Attach (line two parts up by anchor, optionally weld) ─────────────────
+
+    from .attach import run_attach_command
+
+    class _AttachCmd:
+        def GetResources(self):
+            return {
+                "MenuText": "Attach",
+                "ToolTip":  ("Select two Partikus parts, then snap one onto the other "
+                             "by named point (e.g. BOTTOM onto TOP). Tick Weld to fuse "
+                             "them into one solid."),
+                "Pixmap":   "",
+            }
+        def Activated(self):
+            run_attach_command()
+        def IsActive(self):
+            return True      # explains itself when the selection is wrong
+
+    FreeCADGui.addCommand("Partikus_Attach", _AttachCmd())
+
     # ── Workbench ─────────────────────────────────────────────────────────────
 
     class PartikusWorkbench(FreeCADGui.Workbench):
@@ -249,8 +269,11 @@ if _HAS_GUI:
             if _CUTTER_COMMANDS:
                 self.appendToolbar("Partikus — Cutters", list(_CUTTER_COMMANDS))
 
+            self.appendToolbar("Partikus — Assemble", ["Partikus_Attach"])
+
             # Menu tree under &Partikus
             base = ["&Partikus"]
+            self.appendMenu(base, ["Partikus_Attach"])
             self.appendMenu(base + ["Primitives"],  _names(_T1))
             self.appendMenu(base + ["Enhanced"],    _names(_T2))
             self.appendMenu(base + ["Profiles 2D"], _names(_T3))

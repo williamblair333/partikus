@@ -727,6 +727,22 @@ assembly = attach(
 
 …instead of manually calculating where the top face of the lid is and offsetting from it.
 
+### In the FreeCAD GUI: Partikus → Attach
+
+The same operation, with no code. Select two Partikus parts (Ctrl+click), then choose
+**Partikus → Attach** or the button on the *Partikus — Assemble* toolbar:
+
+| Field | Meaning |
+|---|---|
+| Move | which of the two parts moves |
+| Its point | anchor on the moving part (default `BOTTOM`) |
+| Onto point of … | anchor on the other part (default `TOP`) |
+| Gap / Rotate | `offset` and `rotation_deg` above |
+| Weld into one solid | also fuse both into one new part and hide the originals |
+
+It is one undo step (Ctrl+Z). Parts you have already moved by hand are handled — anchors
+follow the part.
+
 ### How attach() works
 
 ```

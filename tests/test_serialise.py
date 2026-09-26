@@ -125,6 +125,57 @@ def test_load_returns_partikus_shape():
         FreeCAD.closeDocument(doc.Name)
 
 
+# ── Anchors follow a part moved by hand ───────────────────────────────────────
+#
+# Anchors are stored in the frame the shape had when it was saved. Moving the
+# object afterwards (Placement in the property editor, Edit -> Transform) moves
+# the geometry but used to leave the loaded anchors behind.
+
+def test_loaded_anchors_follow_a_hand_moved_part():
+    from partikus import translate
+    doc = FreeCAD.newDocument("TestSerMove1")
+    try:
+        # A non-identity save-time placement: the correction must be relative.
+        obj = save_to_doc(translate(box(10, 10, 10), dx=30), "B", doc)
+        p = obj.Placement
+        p.Base = p.Base + FreeCAD.Vector(0, 50, 0)
+        obj.Placement = p
+        doc.recompute()
+        top = load_from_doc(obj).anchors[TOP]
+        assert _approx(top.x, 30) and _approx(top.y, 50) and _approx(top.z, 5), top
+    finally:
+        FreeCAD.closeDocument(doc.Name)
+
+
+def test_loaded_anchors_and_normals_follow_a_hand_rotated_part():
+    doc = FreeCAD.newDocument("TestSerMove2")
+    try:
+        obj = save_to_doc(box(10, 10, 10), "B", doc)
+        obj.Placement = FreeCAD.Placement(FreeCAD.Vector(0, 0, 0),
+                                          FreeCAD.Rotation(FreeCAD.Vector(1, 0, 0), 90))
+        doc.recompute()
+        loaded = load_from_doc(obj)
+        # TOP (0,0,5) rotated 90 deg about X lands at (0,-5,0), facing -Y.
+        top, n = loaded.anchors[TOP], loaded.orientations[TOP]
+        assert _approx(top.y, -5) and _approx(top.z, 0), top
+        assert _approx(n.y, -1) and _approx(n.z, 0), n
+    finally:
+        FreeCAD.closeDocument(doc.Name)
+
+
+def test_load_of_a_part_saved_before_placement_tracking_is_unchanged():
+    # Files written before the PartikusPlacement property existed have no
+    # record of the save-time placement; they load exactly as they always did.
+    doc = FreeCAD.newDocument("TestSerMove3")
+    try:
+        obj = save_to_doc(box(10, 10, 10), "B", doc)
+        obj.removeProperty("PartikusPlacement")
+        top = load_from_doc(obj).anchors[TOP]
+        assert _approx(top.z, 5), top
+    finally:
+        FreeCAD.closeDocument(doc.Name)
+
+
 # ── FCStd round-trip ──────────────────────────────────────────────────────────
 
 def test_fcstd_roundtrip_anchors():

@@ -1,7 +1,7 @@
 # Partikus — Developer Handoff
 
 **Last updated:** 2026-09-26  
-**Status:** Milestones 1–13 complete + visual regression suite + AI-prompt expansion + PF1e template example + getting-started tutorial — 794 tests passing — **GUI workbench installs, loads, renders, and passes its full click-through test plan**  
+**Status:** Milestones 1–13 complete + visual regression suite + AI-prompt expansion + PF1e template example + getting-started tutorial + GUI Attach/weld command — 810 tests passing — **GUI workbench installs, loads, renders, and passes its full click-through test plan**  
 **Next milestone:** a new tier / BRep-stub workarounds (when FreeCAD exposes the APIs), or the recipe pattern (§6 item 6)
 
 > **Start here if you are picking up the GUI work:** §2a below. The workbench was
@@ -224,8 +224,9 @@ partikus/
 │   │   ├── generator.py                 # ScriptGenerator — analysis dict → runnable Python
 │   │   └── pipeline.py                  # high-level: analyze_image, analyze_text, generate_script, run_script
 │   └── gui/
+│       ├── attach.py                    # Attach command: snap part onto part by anchor, weld
 │       ├── auto_dialog.py               # uses save_to_doc for anchor-preserving GUI shapes
-│       └── workbench.py                 # Tiers 1–8 commands (84 functions, 8 toolbars)
+│       └── workbench.py                 # Tiers 1–8 commands (84 functions, 8 toolbars) + Attach
 ├── tests/
 │   ├── run_tests.py                     # headless runner — start here
 │   ├── run_integration_tests.py         # AI pipeline tests (requires ANTHROPIC_API_KEY)
@@ -486,7 +487,9 @@ Candidate next steps (no hard blockers):
 
 6. **Recipe pattern (discussed, not started).** The stated want is "pick a part from the
    library → set parameters → cut → weld", with no AI. Tiers 4–8 plus the auto-dialog are
-   already that; what is missing is discoverability and the combine step. A recipe module
+   already that, and since 2026-09-26 **Partikus → Attach** is the combine step: select two
+   parts, snap one onto the other by named point, tick Weld to fuse
+   (`partikus/gui/attach.py`). What is still missing is discoverability. A recipe module
    (top-level parameters + `build(**params)` + one generic re-run-on-change dialog,
    OpenSCAD Customizer style) is the cheap route.
 
@@ -678,4 +681,4 @@ If anything is failing, fix it before adding new code.
 
 ---
 
-*End of handoff. Milestones 1–13 complete + visual regression suite + AI-prompt expansion + PF1e template example + getting-started tutorial. 794 tests passing. GUI workbench installs, loads and passes its click-through test plan (2026-09-26); `Literal` annotation pass done. Next: a new tier, or the recipe pattern.*
+*End of handoff. Milestones 1–13 complete + visual regression suite + AI-prompt expansion + PF1e template example + getting-started tutorial + GUI Attach/weld command. 810 tests passing. GUI workbench installs, loads and passes its click-through test plan (2026-09-26); `Literal` annotation pass done. Next: a new tier, or the recipe pattern.*

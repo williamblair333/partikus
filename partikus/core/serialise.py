@@ -6,6 +6,8 @@ save_to_doc()   — stores a PartikusShape as Part::FeaturePython, persisting
                   survive .FCStd round-trips.
 
 load_from_doc() — reconstructs a PartikusShape from such a feature.
+
+store_shape()   — replaces the shape and anchors of an existing feature.
 """
 
 import FreeCAD
@@ -28,6 +30,7 @@ class _PartikusProxy:
             "Partikus",
             "Anchor outward normals (name -> (x, y, z))",
         ).PartikusOrientations = {}
+        _ensure_placement_property(obj)
         obj.Proxy = self
 
     def execute(self, obj):
@@ -38,6 +41,36 @@ class _PartikusProxy:
 
     def __setstate__(self, _state):
         pass
+
+
+def _ensure_placement_property(obj):
+    # The anchors are stored in the frame the shape had when it was written.
+    # This records that frame, so a part moved by hand afterwards (Placement,
+    # Edit -> Transform) can have its anchors moved to match on load. Objects
+    # saved before this existed lack it and load exactly as they always did.
+    if "PartikusPlacement" not in obj.PropertiesList:
+        obj.addProperty(
+            "App::PropertyPlacement",
+            "PartikusPlacement",
+            "Partikus",
+            "Placement the anchors were stored in (internal)",
+        )
+        obj.setEditorMode("PartikusPlacement", 2)    # hidden: not user-editable
+
+
+def store_shape(obj, shape):
+    """
+    Write *shape* and its anchors into an existing Partikus feature *obj*.
+
+    save_to_doc() uses this for new features; the GUI Attach command uses it to
+    replace a part in place. Anchors and the frame they are expressed in are
+    always written together, so they cannot drift apart.
+    """
+    obj.Shape                = shape.shape
+    obj.PartikusAnchors      = {k: (v.x, v.y, v.z) for k, v in shape.anchors.items()}
+    obj.PartikusOrientations = {k: (v.x, v.y, v.z) for k, v in shape.orientations.items()}
+    _ensure_placement_property(obj)
+    obj.PartikusPlacement    = obj.Placement      # the Shape assignment set it
 
 
 def _warn_if_degenerate(label, raw):
@@ -108,9 +141,7 @@ def save_to_doc(shape, label, doc=None):
 
     obj = doc.addObject("Part::FeaturePython", label)
     _PartikusProxy(obj)
-    obj.Shape               = shape.shape
-    obj.PartikusAnchors      = {k: (v.x, v.y, v.z) for k, v in shape.anchors.items()}
-    obj.PartikusOrientations = {k: (v.x, v.y, v.z) for k, v in shape.orientations.items()}
+    store_shape(obj, shape)
 
     # DO NOT REMOVE — this line is what makes the shape visible.
     #
@@ -141,6 +172,9 @@ def load_from_doc(obj):
     """
     Reconstruct a PartikusShape from a feature created by save_to_doc().
 
+    Anchors follow the part: if it was moved or rotated by hand after it was
+    saved, the returned anchors and normals are moved the same way.
+
     Args:
         obj: FreeCAD.DocumentObject with PartikusAnchors and
              PartikusOrientations properties
@@ -156,4 +190,9 @@ def load_from_doc(obj):
     """
     anchors      = {k: FreeCAD.Vector(*v) for k, v in obj.PartikusAnchors.items()}
     orientations = {k: FreeCAD.Vector(*v) for k, v in obj.PartikusOrientations.items()}
+    if "PartikusPlacement" in obj.PropertiesList:
+        # How far the part has been moved since its anchors were stored.
+        moved = obj.Placement.multiply(obj.PartikusPlacement.inverse())
+        anchors      = {k: moved.multVec(v)          for k, v in anchors.items()}
+        orientations = {k: moved.Rotation.multVec(v) for k, v in orientations.items()}
     return PartikusShape(obj.Shape, anchors, orientations)
