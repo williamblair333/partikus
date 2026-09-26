@@ -6,8 +6,8 @@
 
 > **Start here if you are picking up the GUI work:** §2a below. The workbench was
 > unreachable on every FreeCAD 1.x install until 2026-09-12; three root causes are fixed
-> and committed, and the remaining work is a manual click-through test plan plus the
-> `Literal` annotation pass.
+> and committed, and the `Literal` annotation pass is done (§6 item 3). The remaining
+> work is a manual click-through test plan.
 
 **Repo hosting:** Primary remote is self-hosted **Gitea** — `origin` = `http://10.0.0.100:3000/bill/partikus`, `remote.pushDefault=origin`. GitHub (`github` remote → `williamblair333/partikus`) is a read-only mirror, kept current by a Gitea push mirror (sync on commit, plus every 8h) — never push to it directly. Plain `git push` goes to Gitea. `main` is protected by a local push-guard hook: land work through a feature branch and a Gitea PR (REST API; the stored git credential authenticates it). The August 2026 rewind of GitHub `main` to `f2dc1d0` is healed — as of 2026-09-26 GitHub and Gitea `main` are identical.
 
@@ -436,6 +436,11 @@ Candidate next steps (no hard blockers):
    `match_surfaces` is an unimplemented stub, and `doc_name` is a name. `tests/test_auto_dialog.py`
    guards the seven that duplicate a preset table's keys against drift.
 
+   Re-swept every `tier*.py` on 2026-09-26: one string parameter the original sweep missed,
+   `knurl(pattern="diamond")` (Tier 10), is also an unimplemented stub (raises
+   `NotImplementedError`) and is left open for the same reason as `match_surfaces`. Annotate
+   both when they are implemented. Nothing else is outstanding.
+
    The original list, kept for reference:
    `auto_dialog` already turns a `Literal["a","b","c"]` annotation into a validated combo
    box. 28 exported functions take a constrained string with no annotation, so the dialog
@@ -604,10 +609,10 @@ Widget mapping, in the order `_make_widget` tests it:
 - `int` → `QSpinBox`
 - everything else → `QDoubleSpinBox`
 
-The `str` branch is a stopgap. A string parameter used to fall through to the float
-spinbox and arrive at the geometry call as `0.0`; the face-anchor list is a heuristic that
-covers four parameters. See §6 item 3 — annotating the other 28 with `Literal` makes it
-redundant and turns typos into impossible inputs instead of tracebacks.
+The `str` branch exists because a string parameter used to fall through to the float
+spinbox and arrive at the geometry call as `0.0`. Every constrained string with a fixed
+value set now uses `Literal` (§6 item 3). The branch still serves the four anchor-name
+parameters, whose valid set depends on the shape, via the face-anchor heuristic.
 
 The workbench (`gui/workbench.py`) registers Tiers 1–8 — 84 functions across 8 toolbars
 and a full menu tree. Expand it for each new tier by adding entries to `_COMMANDS` and
@@ -672,4 +677,4 @@ If anything is failing, fix it before adding new code.
 
 ---
 
-*End of handoff. Milestones 1–13 complete + visual regression suite + AI-prompt expansion + PF1e template example. 750 tests passing. GUI workbench installs and loads as of 2026-09-12. Next: `Literal` annotations for Tiers 1–8, then the GUI click-through test plan.*
+*End of handoff. Milestones 1–13 complete + visual regression suite + AI-prompt expansion + PF1e template example + getting-started tutorial. 792 tests passing. GUI workbench installs and loads as of 2026-09-12; `Literal` annotation pass done. Next: the GUI click-through test plan.*
