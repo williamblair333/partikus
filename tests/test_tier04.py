@@ -70,6 +70,17 @@ def test_countersink_hole_larger_than_thru():
     c = countersink_hole(3, 6, 90, 10)
     assert c.shape.Volume > thru
 
+def test_countersink_hole_is_wide_at_the_top():
+    # Volume cannot tell a countersink from one built upside down, which is how
+    # an inverted cone went unnoticed: it left a thru-diameter opening at the
+    # surface with the wide seat buried below it. Probe the shape instead.
+    # (4, 8, 90, 10): cone 2 mm tall, mouth r=4 at z=+5, neck r=2 at z=+3.
+    c = countersink_hole(thru_diameter=4, head_diameter=8, head_angle_deg=90, depth=10)
+    assert c.shape.isInside(_V(3.5, 0, 4.9), 1e-6, True), "mouth must be head-wide at TOP"
+    assert not c.shape.isInside(_V(3.5, 0, 3.1), 1e-6, True), "cone must narrow toward the bore"
+    assert c.shape.isInside(_V(1.8, 0, -4.5), 1e-6, True), "thru bore runs to BOTTOM"
+    assert not c.shape.isInside(_V(2.5, 0, -4.5), 1e-6, True)
+
 
 # ── slot_hole ─────────────────────────────────────────────────────────────────
 

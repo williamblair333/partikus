@@ -43,6 +43,17 @@ Versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+**`countersink_hole()` was built upside down** (`partikus/tier04_mechanical.py`)
+- The cone's two radii were passed to `Part.makeCone` in the wrong order, so the wide
+  mouth sat inside the part and the surface had only a thru-diameter opening. A screw
+  head could not seat. The docstring, the GUI command and the AI prompt all described it
+  correctly. Volume, bounding box and anchors are unchanged, so the tests, which checked
+  only validity and volume, could not see it.
+- **Behaviour change:** a script that flipped the cutter to make it look right now gets
+  an upside-down hole. Remove the flip.
+- New test `test_countersink_hole_is_wide_at_the_top` probes the solid and fails on the
+  old code. Found by an independent fact-check of the README's GUI walkthrough.
+
 **GUI buttons were greyed out on a fresh launch** (`partikus/gui/workbench.py`)
 - Every command reported `IsActive()` False until a document existed, and nothing said why.
   Commands are now always active; `_add_to_doc` creates the document on OK, so Cancel
