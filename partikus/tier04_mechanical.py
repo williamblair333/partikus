@@ -118,7 +118,9 @@ def countersink_hole(thru_diameter=3.0, head_diameter=6.0,
     half_angle = math.radians(head_angle_deg / 2)
     cone_h = (head_diameter / 2 - thru_diameter / 2) / math.tan(half_angle)
     hh = depth / 2
-    cone_shape = Part.makeCone(head_diameter / 2, thru_diameter / 2,
+    # makeCone puts its first radius at the base point and the second at the
+    # far end: narrow at the neck (hh - cone_h), head-wide at the surface (hh).
+    cone_shape = Part.makeCone(thru_diameter / 2, head_diameter / 2,
                                cone_h, _V(0, 0, hh - cone_h))
     cyl_h = max(depth - cone_h, 1e-3)
     cyl_shape = Part.makeCylinder(thru_diameter / 2, cyl_h, _V(0, 0, -hh))
