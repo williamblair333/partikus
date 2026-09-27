@@ -2,7 +2,7 @@
 
 > **A parametric CAD toolkit for FreeCAD. Every part has its place.**
 
-[![Tests](https://img.shields.io/badge/tests-717%20passing-brightgreen)](#testing)
+[![Tests](https://img.shields.io/badge/tests-834%20passing-brightgreen)](#testing)
 [![Python](https://img.shields.io/badge/python-3.11-blue)](https://www.python.org/)
 [![FreeCAD](https://img.shields.io/badge/FreeCAD-1.1.1-orange)](https://www.freecad.org/)
 [![License](https://img.shields.io/badge/license-LGPL--2.1-lightgrey)](LICENSE)
@@ -37,6 +37,7 @@ The architecture is built for three audiences at once:
 
 - [**Getting Started tutorial**](docs/getting-started.md) ← new users start here
 - [Quick Start](#quick-start)
+- [**Using the GUI**](#using-the-gui) ← no code; a worked example, start to STL
 - [Examples](#examples)
 - [Architecture Overview](#architecture-overview)
 - [Tier Reference](#tier-reference)
@@ -44,6 +45,9 @@ The architecture is built for three audiences at once:
   - [Tier 1 — Raw Primitives](#tier-1--raw-3d-primitives)
   - [Tier 2 — Enhanced Primitives](#tier-2--enhanced-primitives)
   - [Tier 3 — 2D Profiles](#tier-3--2d-profiles)
+  - [Tier 4 — Mechanical Features](#tier-4--mechanical-features)
+  - [Tier 5 — Fasteners](#tier-5--fasteners)
+  - [Tier 6 — Mechanical Components](#tier-6--mechanical-components)
   - [Tier 7 — Container / Enclosure Features](#tier-7--container--enclosure-features)
   - [Tier 8 — Electronics Mounting](#tier-8--electronics-mounting)
   - [Tier 9 — Boolean Operations](#tier-9--boolean-operations)
@@ -132,6 +136,75 @@ from partikus import rounded_rectangle, extrude
 profile = rounded_rectangle(30, 20, fillet_radius=3)
 solid   = extrude(profile, height=8)
 ```
+
+---
+
+## Using the GUI
+
+Everything below is done with the mouse; no Python. Verified step by step in FreeCAD 1.1.1.
+
+### Open the workbench
+
+`./install.sh` (see [Quick Start](#quick-start)) also installs the workbench into FreeCAD.
+Start FreeCAD (`squashfs-root/AppRun`, or your installed FreeCAD) and pick **Partikus**
+from the workbench dropdown in the toolbar, or **View → Workbench → Partikus**. A
+**Partikus** menu appears, plus one toolbar per tier. Re-run `./install.sh` after
+upgrading FreeCAD; the workbench is installed per FreeCAD version.
+
+### How the commands work
+
+- **Every command opens a dialog built from its function's parameters.** Field names are
+  the parameter names with the underscores turned into spaces: `fillet_radius` is
+  *Fillet Radius*. So the [Tier Reference](#tier-reference) below doubles as a guide to
+  every dialog. Lengths are mm, and fields ending in *Deg* are degrees. A field showing
+  **auto** means "let the function work it out".
+- **New parts appear centred on the origin**, like everything in Partikus.
+- **Commands marked *(cutter)* make a negative volume**: holes, slots, connector
+  cutouts. They are also gathered on the *Partikus — Cutters* toolbar. A cutter removes
+  nothing by itself. Subtract it with FreeCAD's **Part → Boolean → Cut**.
+- **The dialogs have no position fields.** Place parts with **Partikus → Attach**
+  ([below](#in-the-freecad-gui-partikus--attach)), which snaps named points together, or
+  by hand: select the part and edit **Placement → Position** in the Property view.
+
+### Worked example: a Raspberry Pi 4 wall-mount plate
+
+A 120 × 70 mm backplate with the Pi 4 mount on top and two countersunk screw holes, so
+the Pi screws flat to a wall or the side of a cabinet.
+
+1. **The plate.** *Partikus → Enhanced → Rounded Box*: Length 120, Width 70, Height 4,
+   Fillet Radius 1.5.
+2. **Two screw-hole cutters.** *Partikus → Mechanical → Countersink Hole (cutter)*: Thru
+   Diameter 4, Head Diameter 8, Head Angle Deg 90, Depth 10. Do it twice.
+3. **Sink each cutter into the plate.** Ctrl+click a cutter and the plate, then
+   *Partikus → Attach*. Set **Move** to the cutter, *Its point* BOTTOM, onto the plate's
+   TOP, and **Gap −10**.
+   A negative gap pushes the part *into* the other one. The gap runs along the plate's
+   outward normal, so a gap of −(the cutter's Depth) leaves the countersink's mouth
+   flush with the plate's top face.
+4. **Slide them out to the ends.** Select each cutter and, in the Property view, set
+   **Placement → Position → x** to 52 for one and −52 for the other. Leave y and z alone:
+   Attach has already set z. Attach only snaps to named points, so anything in between
+   is a hand move. Attach still works on parts you have moved by hand.
+5. **The Pi mount, welded on.** *Partikus → Electronics → Raspberry Pi Mount*, Model
+   4B. Ctrl+click it and the plate, *Partikus → Attach*: Move the mount, BOTTOM onto
+   TOP, and tick **Weld into one solid**. This makes a new part, *Weld*, and hides the two
+   originals.
+6. **Cut the holes.** Switch to the **Part** workbench. Click *Weld*, Ctrl+click the
+   first cutter (**order matters: the first one selected is kept**), then *Part →
+   Boolean → Cut*. Repeat with the resulting *Cut* and the second cutter.
+7. **Export.** Select the final *Cut*, then *File → Export*, and choose the file type
+   **"STL Mesh"**. (Not "FEM mesh formats", which also lists `.stl` but fails with "No
+   FEM mesh for export selected".)
+
+> **Position first, combine second.** Attach works only on Partikus parts. The result
+> of *Part → Boolean → Cut* is not one, so it cannot be attached. A *Weld* is a Partikus
+> part, but a combined shape keeps only CENTER, TOP and BOTTOM, measured from its
+> bounding box. Here the Weld's TOP is the top of the Pi standoffs, not the plate. That
+> is why step 3 attaches the cutters to the plate *before* step 5 welds.
+
+When the menus run out (a custom-shaped cutter, a ring of grip flutes, a pattern), move
+to a script. [`examples/replacement_knob.py`](#examplesreplacement_knobpy--the-part-you-cant-buy)
+is a complete part built that way.
 
 ---
 
@@ -361,6 +434,85 @@ polyline(points, closed=False)            # 2D (x,y) or 3D (x,y,z) tuples
 
 ---
 
+### Tier 4 — Mechanical Features
+
+Functions marked **cutter** return a negative volume to subtract with `difference()`
+(GUI: *Part → Boolean → Cut*). Every cutter is centred on the origin and grows both ways.
+
+```python
+boss(diameter=10, height=5, hole_diameter=None)        # raised post, optional bore
+rib(length=20, height=15, thickness=3, draft_angle_deg=0)
+gusset(length=20, height=20, thickness=3)               # right-triangle corner plate
+flange(inner_diameter=20, outer_diameter=40, thickness=5, hole_pattern=None)
+lip(outer_diameter=40, height=20, lip_width=3, lip_height=5)
+tab(width=10, height=5, thickness=2)
+tongue(length=15, width=6, height=3)                    # mates with groove()
+
+l_bracket(length=30, height=30, thickness=3, width=20)
+t_bracket(arm_length=40, stem_length=20, width=20, thickness=3)
+u_bracket(length=40, height=20, width=20, thickness=3, leg_height=15)
+
+dovetail_pin(length=20, narrow_width=6, wide_width=10, height=5)
+snap_clip(length=20, width=5, hook_height=2, flex_arm_length=12)
+living_hinge(length=40, thickness=0.5, hinge_width=10)
+
+# cutters
+counterbore_hole(thru_diameter=5, bore_diameter=9, bore_depth=4, depth=10)
+countersink_hole(thru_diameter=3, head_diameter=6, head_angle_deg=82, depth=10)
+  # 82° is the imperial wood/sheet screw angle; ISO metric flat heads are 90°
+slot_hole(length=20, width=6, depth=5)                  # round-ended
+slot_cutout(width=10, height=5, depth=3)                # square-ended
+keyway(width=4, depth=2, length=20)
+groove(length=15, width=6, depth=3)
+dovetail_slot(length=20, narrow_width=6, wide_width=10, height=5)
+```
+
+---
+
+### Tier 5 — Fasteners
+
+ISO dimensions (M2–M20) come from `partikus/presets/screws.py`. Any `None` argument
+takes the ISO value for that `diameter`. Threads are cosmetic (smooth at nominal size).
+
+```python
+hex_bolt(diameter=6, length=20, pitch=None, across_flats=None, head_height=None)    # ISO 4014
+socket_head_bolt(diameter=6, length=20, ...)            # ISO 4762
+button_head_bolt(diameter=6, length=20, ...)            # ISO 7380
+flat_head_bolt(diameter=6, length=20, ...)              # ISO 10642, countersunk
+hex_nut(diameter=6, pitch=None, across_flats=None, height=None)                     # ISO 4032
+flat_washer(bolt_diameter=6, ...)                       # ISO 7089
+lock_washer(bolt_diameter=6, ...)                       # ISO 7980
+threaded_rod(diameter=6, length=20, pitch=None, thread_form="metric")
+standoff(diameter=8, length=10, thread_size=None)
+dowel_pin(diameter=4, length=20)
+screw_size_preset(name="M6")                            # → dict of ISO dimensions
+
+# cutters
+clearance_hole(bolt_size="M6", depth=10, fit="close", hole_diameter=None)
+  # fit: "close" | "normal" | "loose"  (ISO 273)
+tapped_hole(diameter=6, depth=10, pitch=None)           # tap-drill size
+heat_set_insert_pocket(insert_size="M3", outer_diameter=None, length=None)
+```
+
+---
+
+### Tier 6 — Mechanical Components
+
+```python
+spur_gear(teeth=20, module=1.0, thickness=5, pressure_angle_deg=20)   # involute
+bevel_gear(teeth=20, module=1.0, cone_angle_deg=45, thickness=10)
+rack(teeth=10, module=1.0, width=None, length=None, height=None)
+sprocket(teeth=16, chain_pitch=12.7, thickness=5)
+pulley_timing(teeth=20, belt_type="GT2", width=7)       # "GT2" | "HTD"
+shaft_coupling(shaft1_diameter=6, shaft2_diameter=6, length=25)
+
+# cutter
+bearing_pocket(bearing_id="608", depth=None, outer_diameter=None)
+  # 606–609, 6000–6008, 6200–6208, 6300–6308
+```
+
+---
+
 ### Tier 7 — Container / Enclosure Features
 
 ```python
@@ -374,7 +526,7 @@ hinged_box(length, width, height, wall_thickness=2, hinge_side="BACK")
   # two-piece box joined by a living-hinge strip; hinge_side: FRONT|BACK|LEFT|RIGHT
 
 magnetic_recess(magnet_diameter, magnet_thickness, count=1, spacing=10)
-  # cylindrical press-fit pockets for disc magnets
+  # cutter — cylindrical press-fit pockets for disc magnets
 
 battery_compartment(battery_type="AA", count=1, wall_thickness=1.5, contact_clearance=2)
   # tray for AA | AAA | C | D | 9V | 18650 | CR2032 | CR2025 | CR2016
@@ -392,7 +544,7 @@ display_window(length, width, recess_depth=0, border_thickness=3, panel_thicknes
   # panel with rectangular viewing aperture; optional stepped recess
 
 button_cutout(diameter, panel_thickness=2, shape="round")
-  # panel through-hole for a button; shape: "round" | "square"
+  # cutter — panel through-hole for a button; shape: "round" | "square"
 ```
 
 ---
@@ -413,13 +565,13 @@ led_holder(led_diameter=5, panel_thickness=2, retention_lip=0.5)
   # press-fit panel mount for 3 mm / 5 mm / 10 mm LEDs
 
 usb_cutout(connector_type="USB-C", panel_thickness=2, clearance=0.3)
-  # connector_type: USB-A | USB-B | USB-C | Micro-USB | Mini-USB
+  # cutter — connector_type: USB-A | USB-B | USB-C | Micro-USB | Mini-USB
 
 hdmi_cutout(connector_type="full", panel_thickness=2, clearance=0.3)
-  # connector_type: full | mini | micro
+  # cutter — connector_type: full | mini | micro
 
 barrel_jack_cutout(outer_diameter=8, panel_thickness=2, clearance=0.2)
-  # common sizes: 5.5 mm, 6.3 mm, 8.0 mm
+  # cutter — common sizes: 5.5 mm, 6.3 mm, 8.0 mm
 
 din_rail_clip(rail_type="35mm", clip_length=40, wall_thickness=2.5)
   # snap-on clip for EN 60715 TS 35 or TS 15 DIN rails
@@ -732,7 +884,7 @@ assembly = attach(
     parent=lid,
     child_anchor="BOTTOM",
     parent_anchor="TOP",
-    offset=2,           # 2mm gap (countersunk)
+    offset=2,           # float 2 mm above the lid; a NEGATIVE offset sinks it in
     rotation_deg=0,
 )
 ```
@@ -749,7 +901,7 @@ The same operation, with no code. Select two Partikus parts (Ctrl+click), then c
 | Move | which of the two parts moves |
 | Its point | anchor on the moving part (default `BOTTOM`) |
 | Onto point of … | anchor on the other part (default `TOP`) |
-| Gap / Rotate | `offset` and `rotation_deg` above |
+| Gap / Rotate | `offset` and `rotation_deg` above. A negative gap pushes the part *into* the other one; that's how you sink a cutter to a depth |
 | Weld into one solid | also fuse both into one new part and hide the originals |
 
 It is one undo step (Ctrl+Z). Parts you have already moved by hand are handled — anchors
@@ -893,7 +1045,7 @@ All dimensions are **mm** unless the parameter name carries a suffix.
 ## Testing
 
 ```bash
-# Full test suite (697 tests, all tiers)
+# Full test suite (834 tests, all tiers)
 squashfs-root/usr/bin/freecadcmd tests/run_tests.py
 
 # Single module
@@ -931,7 +1083,7 @@ squashfs-root/usr/bin/freecadcmd tests/run_integration_tests.py
 | SubD | `test_subd.py` | SubDMesh engine, all `subd_*` functions, conversions, analysis |
 | Visual | `test_visual_regression.py` | zebra/reflection PNG output vs committed baselines |
 
-**Total: 717 tests — 717 passing**
+**Total: 834 tests — 834 passing**
 
 ---
 
@@ -983,7 +1135,8 @@ partikus/
 │   │   ├── generator.py                 # ScriptGenerator — analysis → Python
 │   │   └── pipeline.py                  # analyze_image, generate_script, run_script
 │   └── gui/
-│       ├── auto_dialog.py               # introspection-based PySide2 dialog builder
+│       ├── auto_dialog.py               # introspection-based dialog builder (FreeCAD's PySide shim)
+│       ├── attach.py                    # Partikus → Attach command and attach_objects()
 │       └── workbench.py                 # FreeCAD workbench registration
 ├── tests/
 │   ├── run_tests.py                     # headless test runner
@@ -996,11 +1149,17 @@ partikus/
 │   ├── test_tier13.py  test_tier14.py  test_tier15.py
 │   ├── test_io.py  test_ai.py
 │   ├── test_serialise.py                # anchor serialisation round-trip tests
+│   ├── test_gui_loader.py  test_auto_dialog.py  test_attach_command.py   # GUI
+│   ├── test_pf1e_templates.py  test_replacement_knob.py                  # examples
 │   ├── test_subd.py                     # SubDMesh + subd_* + conversion + analysis tests
 │   ├── test_visual_regression.py        # zebra/reflection PNG output vs baselines
 │   └── baselines/                       # committed reference PNGs for visual regression
 └── examples/
+    ├── getting_started.py               # the tutorial's finished part
     ├── capped_cylinder.py               # minimal intro example
+    ├── hand_mirror.py                   # mirror frame with a rebated window
+    ├── replacement_knob.py              # D-shaft knob from caliper readings
+    ├── pf1e_burst_templates.py          # tabletop area-of-effect templates
     └── rpi4_enclosure.py                # full-API showcase
 ```
 
