@@ -101,7 +101,9 @@ Windows and macOS are untested.
    ```
    A good run prints green ✓ lines ending with `Workbench installed: …/Mod/partikus ->
    …/partikus` and "Restart FreeCAD, then pick "Partikus" from the workbench dropdown."
-   A ✗ line says what is missing.
+   A ✗ line says what is missing. No `sudo` is needed. The script makes the AppImage
+   executable itself, unpacks it into `squashfs-root/` here, and adds one link in your
+   FreeCAD user folder. Run all the commands below from the `partikus` folder.
 
 **Which command to type.** This README writes `squashfs-root/usr/bin/freecadcmd`
 (run a script, no window) and `squashfs-root/AppRun` (open FreeCAD). If `install.sh`
@@ -184,6 +186,9 @@ upgrading FreeCAD; the workbench is installed per FreeCAD version.
   *Fillet Radius*. So the [Tier Reference](#tier-reference) below doubles as a guide to
   every dialog. Lengths are mm, and fields ending in *Deg* are degrees. A field showing
   **auto** means "let the function work it out".
+- **Menu name → Tier Reference section:** Primitives → Tier 1, Enhanced → Tier 2,
+  Profiles 2D → Tier 3, Mechanical → Tier 4, Fasteners → Tier 5, Components → Tier 6,
+  Enclosures → Tier 7, Electronics → Tier 8.
 - **New parts appear centred on the origin**, like everything in Partikus.
 - **Commands marked *(cutter)* make a negative volume**: holes, slots, connector
   cutouts. They are also gathered on the *Partikus — Cutters* toolbar. A cutter removes
@@ -203,20 +208,24 @@ the tree: every part you make gets a line there, named after the command that ma
 property editor, with two tabs at the bottom, **View** and **Data**; positions are on
 **Data**. To *select* a part, click its name in the tree (or the part in the 3D view).
 **Ctrl+click** adds a second part to the selection, and the order you click in
-matters for step 6. **Ctrl+Z** undoes any step. You don't need *File → New* first: the first part you
-make creates a document called *Partikus*. If a part is off screen, **View →
-Standard Views → Fit All** (or press **V** then **F**) brings everything into view.
+matters for step 6. **Ctrl+Z** undoes any step. You don't need *File → New* first:
+the first part you make creates a document called *Partikus*. If a part is off
+screen, **View → Standard Views → Fit All** (or press **V** then **F**) brings
+everything into view. If the Model panel isn't showing, turn it on with **View →
+Panels → Model**.
 
 **Hardware:** four **M2.5 × 6 mm** screws for the Pi, and two **M4 countersunk**
-screws for the wall. For **#8 wood screws** instead, use Thru Diameter **4.5**, Head
-Diameter **8.5** and Head Angle Deg **82** in step 2; everything else is the same.
+screws for the wall. For **#8 wood screws** instead, change only Head Angle Deg to
+**82** in step 2; everything else is the same.
 
 1. **The plate.** Menu **Partikus → Enhanced → Rounded Box**. In the dialog set
    Length **120**, Width **70**, Height **4**, Fillet Radius **1.5**; leave Edges on
    *auto*. Click **OK**. `rounded_box` appears in the tree. That's the plate.
 
 2. **Two screw-hole cutters.** **Partikus → Mechanical → Countersink Hole (cutter)**:
-   Thru Diameter **4**, Head Diameter **8**, Head Angle Deg **90**, Depth **10**, **OK**.
+   Thru Diameter **4.5**, Head Diameter **9**, Head Angle Deg **90**, Depth **10**,
+   **OK**. (4.5 rather than 4 gives an M4 screw room to pass; printed holes come out a
+   little small.)
    Do it a second time with the same numbers. You now have `countersink_hole` and
    `countersink_hole001`, both in the middle of the plate and sticking out above and
    below it. That's expected; step 3 sets their height.
@@ -251,7 +260,7 @@ Diameter **8.5** and Head Angle Deg **82** in step 2; everything else is the sam
    **Partikus → Attach**: Move `raspberry_pi_mount`, BOTTOM onto TOP, Gap **0**, tick
    **Weld into one solid**, **OK**. A new part called `Weld` appears; `rounded_box` and
    `raspberry_pi_mount` are hidden (greyed out in the tree) because they're now inside it.
-   The mount is 89 × 60 mm, so it ends 3.5 mm short of the screw heads at x = ±48.
+   The mount is 89 × 60 mm, so it ends 3 mm short of the screw heads at x = ±47.5.
 
 6. **Cut the holes.** Switch workbench: in the toolbar dropdown that now reads
    *Partikus*, choose **Part**. Click `Weld`, Ctrl+click `countersink_hole`, then
@@ -319,7 +328,7 @@ covered**; this example won't fit them.
 | `SHAFT_FLAT` | One jaw flat against the flat, the other on the far curved side. On a double-D, flat to flat | 4.75 |
 | `SHAFT_FLATS` | Count the flats: `1` or `2` | 1 |
 | `SHAFT_ENGAGE` | How deep the shaft went into the old knob: rest the end of the calipers on the old knob's **bottom rim** (the edge that faced the panel) and push the depth rod down to the bottom of its hole. No old knob? Measure the shaft from the **panel face** to its tip and subtract 2 mm, so the new knob clears the panel | 13 |
-| `POINTER_DEG` | With the control still at OFF and facing the panel: the angle from the way the flat faces to the panel's OFF mark, anticlockwise positive. `0` = the flat faces the OFF mark (the usual layout), `90` = OFF is a quarter turn anticlockwise from it, `180` = opposite. On a clock face, each hour is 30° | 0 |
+| `POINTER_DEG` | With the control still at OFF and facing the panel: the angle from the way the flat faces to the panel's OFF mark, anticlockwise positive. `0` = the flat faces the OFF mark (the usual layout), `90` = OFF is a quarter turn anticlockwise from it, `180` = opposite. On a clock face, each hour is 30°. On a **double-D**, measure from either flat; the fit check in step 6 catches a knob that went on half a turn out | 0 |
 
 For the knob itself, measure the old one, or a surviving knob on the same panel so
 the new one matches its neighbours: `KNOB_DIA` (across) and `KNOB_HEIGHT` (top to
@@ -373,7 +382,8 @@ replacement knob
 ```
 
 If a measurement can't make a working knob, it stops with a message naming the setting
-and why, for example `SHAFT_FLAT 3.0 must be between 3.17 and SHAFT_DIA 6.35`. Fix
+and why, for example `SHAFT_FLAT 3.0 must be between 3.17 and SHAFT_DIA 6.35` (on a
+D shaft the flat reading can't be less than half the diameter). Fix
 that number and run it again. The three files are in `examples/out/`, named after
 your copy:
 
@@ -387,16 +397,21 @@ your copy:
 
 Print `stove_knob_fit_coupon.stl` (a few minutes) **in the same filament and
 settings you'll use for the knob**, and push it onto the shaft. The notch in its rim
-marks the flat side.
+marks the flat side (on a double-D, one of the flats).
+
+Nothing but friction holds the knob on, so this fit matters.
 
 | The coupon… | Do this |
 |---|---|
-| slides on snugly and doesn't turn on the shaft | Good. Go to step 5 |
-| won't go on, or needs force | Raise `FIT_CLEARANCE` by 0.05, re-run step 3, print a new coupon |
-| is loose, wobbles, or turns on the shaft | Lower `FIT_CLEARANCE` by 0.05, re-run step 3, print a new coupon |
+| pushes on by hand with firm pressure, doesn't turn on the shaft, and stays put when you tug it gently | Good. Go to step 5 |
+| won't go on, or needs a tool | Raise `FIT_CLEARANCE` by 0.05, re-run step 3, print a new coupon |
+| slides on freely, wobbles, falls off, or turns on the shaft | Lower `FIT_CLEARANCE` by 0.05, re-run step 3, print a new coupon |
 
-Every printer is different; this is why the coupon exists. Five minutes of coupon
-saves an hour of knob.
+The knob grips a little harder than the coupon, because its hole is longer. So a
+coupon that is only just snug is right. Every printer is different; this is why the
+coupon exists. Five minutes of coupon saves an hour of knob. If three rounds haven't
+got it right, re-measure `SHAFT_DIA` and `SHAFT_FLAT` before changing the clearance
+further.
 
 ### 5. Print the knob
 
@@ -407,10 +422,21 @@ the bore and the grip solid.
 
 ### 6. Fit it and check the pointer
 
-Push the knob on. Turn the control to its OFF position and check the pointer reads OFF.
-If it doesn't, look at the knob face: if the pointer sits clockwise of OFF, *add* that
-angle to `POINTER_DEG`; if anticlockwise, subtract it. Re-run step 3 and reprint the knob. The coupon can't check this. A pointer that
-lies is worse than no knob, and on a gas valve it's the knob you trust to say OFF.
+Push the knob on. With the control at OFF, check the pointer reads OFF. On a
+**double-D**, if it points exactly the opposite way, pull the knob off, turn it half
+a turn, and push it back on.
+
+If the pointer is off by some other angle, judge it on the clock face (each hour is
+30°). If it sits clockwise of OFF, *add* that angle to `POINTER_DEG`; if
+anticlockwise, subtract it. Re-run step 3 and reprint the knob. The coupon can't
+check this.
+
+Then work the control through its whole range. **On a gas cooker, push and turn
+exactly as you would with the old knob.** The knob must turn the valve without
+slipping on the shaft, must not rub the panel, and must come back to OFF and read
+OFF. A pointer that lies is worse than no knob, and on a gas valve it's the knob you
+trust to say OFF. If it slips or rubs, don't use it: lower `FIT_CLEARANCE` for a
+slip, or reduce `SHAFT_ENGAGE` for a rub, and reprint.
 
 ---
 
@@ -456,7 +482,6 @@ every major feature of the library:
 
 ```bash
 # Headless — no display required, outputs files to examples/out/
-cd /opt/proj/partikus
 squashfs-root/usr/bin/freecadcmd examples/rpi4_enclosure.py
 
 # Live GUI — watch it build step-by-step in FreeCAD's 3-D view

@@ -40,6 +40,18 @@ Versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
     has a reference surface, and `POINTER_DEG` is measured facing the panel. The
     spring-clip advice was reversed: the bore has no room for a clip, which the
     example's docstring had also got wrong.
+- A second cold read found no blockers (Pi plate 9/10, knob 8/10). Fixes from it:
+  - **Wall screws:** the M4 screw hole was 4 mm, which leaves no clearance and would
+    fail on a first print. It's now 4.5 mm with a 9 mm head, and #8 wood screws need
+    only the angle changed. The mount clearance is restated as 3 mm.
+  - **Fit test:** a coupon test that says what "snug" feels like, with a tug test,
+    because friction alone holds the knob. It notes that the knob grips harder than
+    the coupon, and says to re-measure after three rounds.
+  - **Double-D shafts:** which flat to measure from, and the half-turn fix.
+  - **Gas valves:** a push-and-turn check through the full range.
+  - **Smaller fixes:** a menu → Tier Reference map; what `install.sh` needs and
+    where it writes; how to get the Model panel back; the example path
+    `cd /opt/proj/partikus` removed.
 
 **Replacement knob: copies run and write their own files** (`examples/replacement_knob.py`)
 - The README now says to copy the script (`examples/stove_knob.py`) before editing,
