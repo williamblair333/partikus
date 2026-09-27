@@ -11,6 +11,19 @@ Versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+**Replacement knob example** (`examples/replacement_knob.py`, `tests/test_replacement_knob.py`)
+- A knob for a D or double-D shaft, built from five caliper readings: for the stove, washer
+  or amplifier knob that broke on a model nobody sells parts for any more. Scalloped grip,
+  pointer groove at a set angle from the flat, hollow underside around a central boss.
+- Exports the knob already flipped for printing (bore and skirt open upward, no supports), a
+  STEP of it as fitted, and a 5 mm fit coupon carrying the same bore to tune `FIT_CLEARANCE`
+  before the full print. Safety notes for cooker knobs: PETG/ASA, and check the pointer
+  against the valve's OFF detent.
+- Shows `attach()` with a negative offset to sink a cutter a set depth into a face.
+- 23 tests check fit by interference against a modelled shaft: the shaft slides in, a
+  slightly larger one does not, and turned 10° it hits the flat. They also cover pointer
+  direction, grip, hollow skirt and print orientation, and refuse impossible measurements.
+
 **Partikus → Attach: line two parts up by named point, optionally weld them**
 (`partikus/gui/attach.py`, `partikus/gui/workbench.py`)
 - Select two Partikus parts and choose Attach (menu or the "Partikus — Assemble" toolbar).
