@@ -11,6 +11,17 @@ Versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+**README: Using the GUI** (`README.md`)
+- How to open the workbench, how the auto-generated dialogs map to the Tier Reference,
+  what *(cutter)* commands are and how to subtract them, and how to position parts
+  (Attach, or Placement by hand).
+- A worked example, driven step by step in a real FreeCAD 1.1.1 GUI through export: a
+  Raspberry Pi 4 wall-mount plate with countersunk screw holes. It covers the negative
+  Attach gap for sinking a cutter, why cutters are attached before welding, the
+  selection order for *Part → Boolean → Cut*, and the right STL export filter.
+- These gaps came from a walkthrough that tried to build the part from the README alone
+  and could not.
+
 **Replacement knob example** (`examples/replacement_knob.py`, `tests/test_replacement_knob.py`)
 - A knob for a D or double-D shaft, built from five caliper readings: for the stove, washer
   or amplifier knob that broke on a model nobody sells parts for any more. Scalloped grip,
@@ -53,6 +64,15 @@ Versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   an upside-down hole. Remove the flip.
 - New test `test_countersink_hole_is_wide_at_the_top` probes the solid and fails on the
   old code. Found by an independent fact-check of the README's GUI walkthrough.
+
+**README reference gaps** (`README.md`)
+- Tiers 4, 5 and 6 (mechanical features, fasteners, gears/bearings), the tiers behind
+  about 40 GUI commands, had no section in the Tier Reference. Added, with cutters
+  marked, and marked the cutters in Tiers 7 and 8.
+- The Anchor System example said `offset=2  # 2mm gap (countersunk)`. A positive offset
+  lifts the part off the surface; sinking takes a negative one.
+- Test counts (717/697 → 834) and the project tree (GUI Attach module, examples, GUI and
+  example tests) were stale.
 
 **GUI buttons were greyed out on a fresh launch** (`partikus/gui/workbench.py`)
 - Every command reported `IsActive()` False until a document existed, and nothing said why.
