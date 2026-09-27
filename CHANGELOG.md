@@ -11,6 +11,55 @@ Versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+**README: step-by-step instructions for both example pieces** (`README.md`)
+- New section *Make a replacement knob*: how to pull the old knob and measure the
+  shaft (with an end-on diagram and a table saying where each caliper reading goes),
+  where to type the numbers, the command and what it prints, what each output file is,
+  a coupon-first fit-tuning table, print settings, and how to correct the pointer.
+- The Pi 4 wall-plate walkthrough now names what's actually on screen, checked in
+  FreeCAD 1.1.1: tree labels (`rounded_box`, `countersink_hole001`, `Weld`, `Cut001`),
+  the Model panel's tree and property editor, the **Data** tab and **Base → Placement →
+  Position → x**, the workbench dropdown, and how to select and Ctrl+click.
+- The earlier version named things by what they were ("the plate") rather than what
+  FreeCAD shows, and the knob had only a blurb and one command.
+- Then a cold read by someone who hadn't seen the code tried to make both from the
+  README alone. Fixes from that:
+  - **Setup:** the Quick Start is now numbered: clone, get the FreeCAD AppImage into
+    the repo folder (it isn't in git), run `install.sh`, and what success looks like.
+    It says setup is Linux-only, and which command to type if FreeCAD is installed
+    instead.
+  - **Front of the README:** the top banner no longer sends newcomers away from the
+    walkthroughs.
+  - **Pi plate:** the hardware is named (M2.5 × 6 mm for the Pi; M4 countersunk, or #8
+    wood-screw settings, for the wall). The Pi's hole is set to 2.2 mm so the screws
+    self-tap, because the plate closes off the nut side. It notes that the mount clears
+    the screw heads by 3.5 mm, that no *File → New* is needed, how to save the
+    `.FCStd`, and a check after each step.
+  - **Knob:** turn the control to OFF *before* pulling the knob. It says which shafts
+    aren't covered, and how to hold the calipers for each reading. `SHAFT_ENGAGE` now
+    has a reference surface, and `POINTER_DEG` is measured facing the panel. The
+    spring-clip advice was reversed: the bore has no room for a clip, which the
+    example's docstring had also got wrong.
+- A second cold read found no blockers (Pi plate 9/10, knob 8/10). Fixes from it:
+  - **Wall screws:** the M4 screw hole was 4 mm, which leaves no clearance and would
+    fail on a first print. It's now 4.5 mm with a 9 mm head, and #8 wood screws need
+    only the angle changed. The mount clearance is restated as 3 mm.
+  - **Fit test:** a coupon test that says what "snug" feels like, with a tug test,
+    because friction alone holds the knob. It notes that the knob grips harder than
+    the coupon, and says to re-measure after three rounds.
+  - **Double-D shafts:** which flat to measure from, and the half-turn fix.
+  - **Gas valves:** a push-and-turn check through the full range.
+  - **Smaller fixes:** a menu → Tier Reference map; what `install.sh` needs and
+    where it writes; how to get the Model panel back; the example path
+    `cd /opt/proj/partikus` removed.
+
+**Replacement knob: copies run and write their own files** (`examples/replacement_knob.py`)
+- The README now says to copy the script (`examples/stove_knob.py`) before editing,
+  one per knob. The run guard matched the literal name `replacement_knob`, so a copy
+  would have silently done nothing. The guard now matches the script's own file name,
+  and the outputs are named after it (`stove_knob.stl`, …), so copies never overwrite
+  each other. The default script's file names are unchanged. A new test pins this.
+
 **README: Using the GUI** (`README.md`)
 - How to open the workbench, how the auto-generated dialogs map to the Tier Reference,
   what *(cutter)* commands are and how to subtract them, and how to position parts

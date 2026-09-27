@@ -2,16 +2,22 @@
 
 > **A parametric CAD toolkit for FreeCAD. Every part has its place.**
 
-[![Tests](https://img.shields.io/badge/tests-834%20passing-brightgreen)](#testing)
+[![Tests](https://img.shields.io/badge/tests-835%20passing-brightgreen)](#testing)
 [![Python](https://img.shields.io/badge/python-3.11-blue)](https://www.python.org/)
 [![FreeCAD](https://img.shields.io/badge/FreeCAD-1.1.1-orange)](https://www.freecad.org/)
 [![License](https://img.shields.io/badge/license-LGPL--2.1-lightgrey)](LICENSE)
 [![Milestone](https://img.shields.io/badge/milestone-13%20complete-brightgreen)](#roadmap)
 
-> **👉 New here? Start with the [Getting Started tutorial](docs/getting-started.md).**
+> **👉 New here?** Set up with the [Quick Start](#quick-start), then pick a way in:
 >
-> Twenty minutes, ends with a real part on disk you can open. This README is a
-> reference — it is organised for looking things up, not for learning the toolkit.
+> - **With the mouse:** [Using the GUI](#using-the-gui) builds a Raspberry Pi wall
+>   plate in FreeCAD, start to STL.
+> - **Make something useful now:** [Make a replacement knob](#make-a-replacement-knob)
+>   for an appliance whose knob broke: measure, print, fit.
+> - **With code:** the [Getting Started tutorial](docs/getting-started.md), twenty
+>   minutes to a real part on disk.
+>
+> The rest of this README is reference, for looking things up.
 
 ---
 
@@ -35,9 +41,10 @@ The architecture is built for three audiences at once:
 
 ## Table of Contents
 
-- [**Getting Started tutorial**](docs/getting-started.md) ← new users start here
-- [Quick Start](#quick-start)
+- [Quick Start](#quick-start) ← setup; do this first
+- [**Getting Started tutorial**](docs/getting-started.md) ← learn the Python API
 - [**Using the GUI**](#using-the-gui) ← no code; a worked example, start to STL
+- [**Make a replacement knob**](#make-a-replacement-knob) ← measure, print, fit
 - [Examples](#examples)
 - [Architecture Overview](#architecture-overview)
 - [Tier Reference](#tier-reference)
@@ -71,27 +78,46 @@ The architecture is built for three audiences at once:
 
 ## Quick Start
 
-### Prerequisites
+### Setup (once)
 
-- [FreeCAD 1.1.1](https://www.freecad.org/downloads.php) (AppImage or installed)
-- Python 3.11 (bundled with FreeCAD)
+**Linux.** `install.sh` is a bash script and the tested FreeCAD is the Linux AppImage.
+Windows and macOS are untested.
 
-### Headless / scripting
+1. **Get Partikus:**
+   ```bash
+   git clone https://github.com/williamblair333/partikus.git
+   cd partikus
+   ```
+2. **Get FreeCAD 1.1 or newer**, either way:
+   - **AppImage (what this README's commands assume):** download the Linux AppImage
+     from [freecad.org/downloads](https://www.freecad.org/downloads.php), e.g.
+     `FreeCAD_1.1.1-Linux-x86_64-py311.AppImage`, and put it **in the `partikus`
+     folder**. `install.sh` unpacks it into `squashfs-root/`.
+   - **Installed FreeCAD:** fine too if `freecadcmd` is on your PATH (`freecadcmd
+     --version` prints 1.1 or later).
+3. **Run the installer:**
+   ```bash
+   ./install.sh
+   ```
+   A good run prints green ✓ lines ending with `Workbench installed: …/Mod/partikus ->
+   …/partikus` and "Restart FreeCAD, then pick "Partikus" from the workbench dropdown."
+   A ✗ line says what is missing. No `sudo` is needed. The script makes the AppImage
+   executable itself, unpacks it into `squashfs-root/` here, and adds one link in your
+   FreeCAD user folder. Run all the commands below from the `partikus` folder.
+
+**Which command to type.** This README writes `squashfs-root/usr/bin/freecadcmd`
+(run a script, no window) and `squashfs-root/AppRun` (open FreeCAD). If `install.sh`
+used your installed FreeCAD instead, type `freecadcmd` and `freecad` in their place.
 
 ```bash
-# One-time setup — detects system FreeCAD or extracts the AppImage automatically
-./install.sh
-
-# Run any script via freecadcmd (no GUI required)
-squashfs-root/usr/bin/freecadcmd my_script.py
+squashfs-root/usr/bin/freecadcmd examples/getting_started.py   # run a script
+squashfs-root/AppRun                                          # open the FreeCAD window
 ```
-
-> **Manual alternative:** `chmod +x FreeCAD_1.1.1-Linux-x86_64-py311.AppImage && ./FreeCAD_1.1.1-Linux-x86_64-py311.AppImage --appimage-extract`
 
 ### Basic usage
 
 ```python
-from partikus import box, cylinder, difference, attach, TOP, BOTTOM
+from partikus import box, cylinder, difference
 
 # A box with a cylindrical hole through it
 body = box(40, 20, 10)
@@ -126,6 +152,7 @@ path = Part.Wire([Part.LineSegment(
 ).toShape()])
 
 pipe = sweep(circle(diameter=10), path)
+# nothing is on disk yet: export with to_stl(pipe, "pipe.stl") as above
 ```
 
 ### 2D profile → extruded solid
@@ -135,6 +162,7 @@ from partikus import rounded_rectangle, extrude
 
 profile = rounded_rectangle(30, 20, fillet_radius=3)
 solid   = extrude(profile, height=8)
+# export with to_step / to_stl as above
 ```
 
 ---
@@ -158,6 +186,9 @@ upgrading FreeCAD; the workbench is installed per FreeCAD version.
   *Fillet Radius*. So the [Tier Reference](#tier-reference) below doubles as a guide to
   every dialog. Lengths are mm, and fields ending in *Deg* are degrees. A field showing
   **auto** means "let the function work it out".
+- **Menu name → Tier Reference section:** Primitives → Tier 1, Enhanced → Tier 2,
+  Profiles 2D → Tier 3, Mechanical → Tier 4, Fasteners → Tier 5, Components → Tier 6,
+  Enclosures → Tier 7, Electronics → Tier 8.
 - **New parts appear centred on the origin**, like everything in Partikus.
 - **Commands marked *(cutter)* make a negative volume**: holes, slots, connector
   cutouts. They are also gathered on the *Partikus — Cutters* toolbar. A cutter removes
@@ -169,32 +200,81 @@ upgrading FreeCAD; the workbench is installed per FreeCAD version.
 ### Worked example: a Raspberry Pi 4 wall-mount plate
 
 A 120 × 70 mm backplate with the Pi 4 mount on top and two countersunk screw holes, so
-the Pi screws flat to a wall or the side of a cabinet.
+the Pi screws flat to a wall or the side of a cabinet. About ten minutes.
 
-1. **The plate.** *Partikus → Enhanced → Rounded Box*: Length 120, Width 70, Height 4,
-   Fillet Radius 1.5.
-2. **Two screw-hole cutters.** *Partikus → Mechanical → Countersink Hole (cutter)*: Thru
-   Diameter 4, Head Diameter 8, Head Angle Deg 90, Depth 10. Do it twice.
-3. **Sink each cutter into the plate.** Ctrl+click a cutter and the plate, then
-   *Partikus → Attach*. Set **Move** to the cutter, *Its point* BOTTOM, onto the plate's
-   TOP, and **Gap −10**.
-   A negative gap pushes the part *into* the other one. The gap runs along the plate's
-   outward normal, so a gap of −(the cutter's Depth) leaves the countersink's mouth
-   flush with the plate's top face.
-4. **Slide them out to the ends.** Select each cutter and, in the Property view, set
-   **Placement → Position → x** to 52 for one and −52 for the other. Leave y and z alone:
-   Attach has already set z. Attach only snaps to named points, so anything in between
-   is a hand move. Attach still works on parts you have moved by hand.
-5. **The Pi mount, welded on.** *Partikus → Electronics → Raspberry Pi Mount*, Model
-   4B. Ctrl+click it and the plate, *Partikus → Attach*: Move the mount, BOTTOM onto
-   TOP, and tick **Weld into one solid**. This makes a new part, *Weld*, and hides the two
-   originals.
-6. **Cut the holes.** Switch to the **Part** workbench. Click *Weld*, Ctrl+click the
-   first cutter (**order matters: the first one selected is kept**), then *Part →
-   Boolean → Cut*. Repeat with the resulting *Cut* and the second cutter.
-7. **Export.** Select the final *Cut*, then *File → Export*, and choose the file type
-   **"STL Mesh"**. (Not "FEM mesh formats", which also lists `.stl` but fails with "No
-   FEM mesh for export selected".)
+**Finding your way around first.** The panel on the left is **Model**. Its top half is
+the tree: every part you make gets a line there, named after the command that made it
+(`rounded_box`, `countersink_hole`, `countersink_hole001`, …). Its bottom half is the
+property editor, with two tabs at the bottom, **View** and **Data**; positions are on
+**Data**. To *select* a part, click its name in the tree (or the part in the 3D view).
+**Ctrl+click** adds a second part to the selection, and the order you click in
+matters for step 6. **Ctrl+Z** undoes any step. You don't need *File → New* first:
+the first part you make creates a document called *Partikus*. If a part is off
+screen, **View → Standard Views → Fit All** (or press **V** then **F**) brings
+everything into view. If the Model panel isn't showing, turn it on with **View →
+Panels → Model**.
+
+**Hardware:** four **M2.5 × 6 mm** screws for the Pi, and two **M4 countersunk**
+screws for the wall. For **#8 wood screws** instead, change only Head Angle Deg to
+**82** in step 2; everything else is the same.
+
+1. **The plate.** Menu **Partikus → Enhanced → Rounded Box**. In the dialog set
+   Length **120**, Width **70**, Height **4**, Fillet Radius **1.5**; leave Edges on
+   *auto*. Click **OK**. `rounded_box` appears in the tree. That's the plate.
+
+2. **Two screw-hole cutters.** **Partikus → Mechanical → Countersink Hole (cutter)**:
+   Thru Diameter **4.5**, Head Diameter **9**, Head Angle Deg **90**, Depth **10**,
+   **OK**. (4.5 rather than 4 gives an M4 screw room to pass; printed holes come out a
+   little small.)
+   Do it a second time with the same numbers. You now have `countersink_hole` and
+   `countersink_hole001`, both in the middle of the plate and sticking out above and
+   below it. That's expected; step 3 sets their height.
+
+3. **Sink each cutter into the plate.** In the tree click `countersink_hole`, then
+   Ctrl+click `rounded_box`. Choose **Partikus → Attach** and set:
+
+   | Field | Set to |
+   |---|---|
+   | Move | `countersink_hole` |
+   | Its point | BOTTOM |
+   | Onto point of `rounded_box` | TOP |
+   | Gap | **-10** |
+
+   Click **OK**, then do the same for `countersink_hole001`.
+   *Why −10:* the gap is measured outward from the plate's top face, so a negative
+   gap pushes the cutter *into* the plate. A gap of −Depth (−10) leaves the
+   countersink's wide mouth exactly level with the plate's top.
+
+4. **Slide the cutters out to the ends.** Click `countersink_hole` in the tree. In the
+   property editor click the **Data** tab and open **Base → Placement → Position**
+   (click the small arrows). Set **x** to **52** and press Enter. Click
+   `countersink_hole001` and set its **x** to **-52**. Leave y and z as they are; z
+   already reads −3 mm because Attach set it. (Attach only snaps to named points, so
+   any position in between is a hand move like this one.)
+
+5. **Add the Pi mount and weld it on.** **Partikus → Electronics → Raspberry Pi
+   Mount**. Model is already **4B**. Set Hole Diameter to **2.2** and click **OK**.
+   (The default 2.9 is a clearance hole for a bolt and nut, but the plate will close
+   off the underside, so 2.2 lets the M2.5 screws cut their own thread into the
+   plastic instead.) Click `raspberry_pi_mount`, Ctrl+click `rounded_box`,
+   **Partikus → Attach**: Move `raspberry_pi_mount`, BOTTOM onto TOP, Gap **0**, tick
+   **Weld into one solid**, **OK**. A new part called `Weld` appears; `rounded_box` and
+   `raspberry_pi_mount` are hidden (greyed out in the tree) because they're now inside it.
+   The mount is 89 × 60 mm, so it ends 3 mm short of the screw heads at x = ±47.5.
+
+6. **Cut the holes.** Switch workbench: in the toolbar dropdown that now reads
+   *Partikus*, choose **Part**. Click `Weld`, Ctrl+click `countersink_hole`, then
+   **Part → Boolean → Cut**. **Click `Weld` first**: the first part selected is kept
+   and the second is cut away. The result is `Cut`. Now click `Cut`, Ctrl+click
+   `countersink_hole001`, and **Part → Boolean → Cut** again, giving `Cut001`: the
+   finished part. You should see two countersunk holes near the plate's short ends.
+
+7. **Export it for printing.** Click `Cut001`, then **File → Export…**. In the
+   file-type list choose **STL Mesh (\*.stl \*.ast)**. Pick a folder, type a file name
+   such as `pi4_wall_plate.stl`, and click **Save**.
+   (Don't pick "FEM mesh formats". It also lists `.stl`, but it fails with "No FEM mesh
+   for export selected".) Open the `.stl` in your slicer and print it flat side down.
+   To keep the design itself, also use **File → Save As…** (a `.FCStd` file).
 
 > **Position first, combine second.** Attach works only on Partikus parts. The result
 > of *Part → Boolean → Cut* is not one, so it cannot be attached. A *Weld* is a Partikus
@@ -202,9 +282,161 @@ the Pi screws flat to a wall or the side of a cabinet.
 > bounding box. Here the Weld's TOP is the top of the Pi standoffs, not the plate. That
 > is why step 3 attaches the cutters to the plate *before* step 5 welds.
 
-When the menus run out (a custom-shaped cutter, a ring of grip flutes, a pattern), move
-to a script. [`examples/replacement_knob.py`](#examplesreplacement_knobpy--the-part-you-cant-buy)
-is a complete part built that way.
+When the menus run out (a custom-shaped cutter, a ring of grip flutes, a pattern),
+the shape has to be written as a Python script. The
+[Getting Started tutorial](docs/getting-started.md) teaches that, and
+[`examples/replacement_knob.py`](examples/replacement_knob.py) is a complete part
+written that way.
+
+---
+
+## Make a replacement knob
+
+The knob on your stove, oven, washer, dryer, fan or amp broke, and nobody sells that
+one any more. [`examples/replacement_knob.py`](examples/replacement_knob.py) builds one
+from your measurements. This section takes you from the broken knob to a fitted one.
+
+**You need:** digital calipers set to **mm**, a 3D printer (PETG or ASA filament for
+anything near heat), a text editor, and the [Quick Start](#quick-start) setup done.
+
+### 1. Measure the shaft
+
+**Before you pull anything, turn the control to OFF.** That's the reference for the
+pointer, and on a gas cooker it's the safe position. Then pull the old knob straight
+off; a stuck one levers off with a butter knife under its skirt. If a metal spring
+clip stays on the shaft, pull that off too. The new knob doesn't use one.
+
+Look at the end of the shaft. It should be round with one flat side (a **D shaft**) or
+two (a **double-D**). **Splined, knurled, slotted or set-screw shafts are not
+covered**; this example won't fit them.
+
+```
+   D shaft, end-on                double-D shaft, end-on
+
+      ________  <- flat               ________  <- flat
+     (        )   ^                  (        )   ^
+    (          )  | SHAFT_FLAT      (          )  | SHAFT_FLAT
+    (          )  |                 (          )  |
+     (        )   v                  (________)   v  <- flat
+       '----'
+    <---------->  SHAFT_DIA          <---------->  SHAFT_DIA
+```
+
+| Setting | How to measure it | Default |
+|---|---|---|
+| `SHAFT_DIA` | Jaws on the two **curved** sides, parallel to the flat, so neither touches it | 6.35 |
+| `SHAFT_FLAT` | One jaw flat against the flat, the other on the far curved side. On a double-D, flat to flat | 4.75 |
+| `SHAFT_FLATS` | Count the flats: `1` or `2` | 1 |
+| `SHAFT_ENGAGE` | How deep the shaft went into the old knob: rest the end of the calipers on the old knob's **bottom rim** (the edge that faced the panel) and push the depth rod down to the bottom of its hole. No old knob? Measure the shaft from the **panel face** to its tip and subtract 2 mm, so the new knob clears the panel | 13 |
+| `POINTER_DEG` | With the control still at OFF and facing the panel: the angle from the way the flat faces to the panel's OFF mark, anticlockwise positive. `0` = the flat faces the OFF mark (the usual layout), `90` = OFF is a quarter turn anticlockwise from it, `180` = opposite. On a clock face, each hour is 30°. On a **double-D**, measure from either flat; the fit check in step 6 catches a knob that went on half a turn out | 0 |
+
+For the knob itself, measure the old one, or a surviving knob on the same panel so
+the new one matches its neighbours: `KNOB_DIA` (across) and `KNOB_HEIGHT` (top to
+bottom). The defaults (a 1/4 in shaft with a 4.75 mm flat, a 40 × 24 mm knob) fit
+many cookers.
+
+### 2. Type the numbers in
+
+Make your own copy first, one per knob, so your numbers are never overwritten. Keep
+it in `examples/`:
+
+```bash
+cp examples/replacement_knob.py examples/stove_knob.py
+```
+
+Open `examples/stove_knob.py` in a text editor. Near the top is a block headed
+**Parameters — your measurements go here**:
+
+```python
+SHAFT_DIA     = 6.35    # round diameter of the shaft
+SHAFT_FLAT    = 4.75    # flat to far side (double-D: flat to flat)
+SHAFT_FLATS   = 1       # 1 = D shaft, 2 = double-D
+SHAFT_ENGAGE  = 13.0    # how deep the shaft goes into the knob
+FIT_CLEARANCE = 0.15    # per side; tune with the fit coupon
+
+KNOB_DIA      = 40.0
+KNOB_HEIGHT   = 24.0
+...
+POINTER_DEG   = 0.0     # pointer angle from the flat, anticlockwise
+```
+
+Change the numbers to yours (millimetres), leave everything else, and save.
+
+### 3. Build it
+
+From the repo folder:
+
+```bash
+squashfs-root/usr/bin/freecadcmd examples/stove_knob.py
+```
+
+Among FreeCAD's own progress messages you'll see a summary like this, then the files
+it wrote. **Check the numbers against your measurements** before printing anything:
+
+```
+replacement knob
+  shaft   : D 6.35 mm, flat 4.75 mm, 13.0 mm deep
+  bore    : +0.15 mm per side
+  knob    : dia 40.0 x 24.0 mm, 20 grip flutes, pointer at 0.0 deg from the flat
+  plastic : 11.3 cm^3
+```
+
+If a measurement can't make a working knob, it stops with a message naming the setting
+and why, for example `SHAFT_FLAT 3.0 must be between 3.17 and SHAFT_DIA 6.35` (on a
+D shaft the flat reading can't be less than half the diameter). Fix
+that number and run it again. The three files are in `examples/out/`, named after
+your copy:
+
+| File | What it is |
+|---|---|
+| `stove_knob_fit_coupon.stl` | a 5 mm ring with the knob's exact hole. **Print this first** |
+| `stove_knob.stl` | the knob, already upside down for printing |
+| `stove_knob.step` | the knob as fitted, to look at: `squashfs-root/AppRun examples/out/stove_knob.step` |
+
+### 4. Print the fit coupon and tune the fit
+
+Print `stove_knob_fit_coupon.stl` (a few minutes) **in the same filament and
+settings you'll use for the knob**, and push it onto the shaft. The notch in its rim
+marks the flat side (on a double-D, one of the flats).
+
+Nothing but friction holds the knob on, so this fit matters.
+
+| The coupon… | Do this |
+|---|---|
+| pushes on by hand with firm pressure, doesn't turn on the shaft, and stays put when you tug it gently | Good. Go to step 5 |
+| won't go on, or needs a tool | Raise `FIT_CLEARANCE` by 0.05, re-run step 3, print a new coupon |
+| slides on freely, wobbles, falls off, or turns on the shaft | Lower `FIT_CLEARANCE` by 0.05, re-run step 3, print a new coupon |
+
+The knob grips a little harder than the coupon, because its hole is longer. So a
+coupon that is only just snug is right. Every printer is different; this is why the
+coupon exists. Five minutes of coupon saves an hour of knob. If three rounds haven't
+got it right, re-measure `SHAFT_DIA` and `SHAFT_FLAT` before changing the clearance
+further.
+
+### 5. Print the knob
+
+Print `stove_knob.stl` **as it comes. Don't rotate it.** It's already upside
+down, so the hole and the hollow underside open upward and nothing needs supports.
+Use PETG or ASA for a cooker; PLA softens at about 60 °C. Three or more walls keep
+the bore and the grip solid.
+
+### 6. Fit it and check the pointer
+
+Push the knob on. With the control at OFF, check the pointer reads OFF. On a
+**double-D**, if it points exactly the opposite way, pull the knob off, turn it half
+a turn, and push it back on.
+
+If the pointer is off by some other angle, judge it on the clock face (each hour is
+30°). If it sits clockwise of OFF, *add* that angle to `POINTER_DEG`; if
+anticlockwise, subtract it. Re-run step 3 and reprint the knob. The coupon can't
+check this.
+
+Then work the control through its whole range. **On a gas cooker, push and turn
+exactly as you would with the old knob.** The knob must turn the valve without
+slipping on the shaft, must not rub the panel, and must come back to OFF and read
+OFF. A pointer that lies is worse than no knob, and on a gas valve it's the knob you
+trust to say OFF. If it slips or rubs, don't use it: lower `FIT_CLEARANCE` for a
+slip, or reduce `SHAFT_ENGAGE` for a rub, and reprint.
 
 ---
 
@@ -223,11 +455,9 @@ squashfs-root/usr/bin/freecadcmd examples/getting_started.py
 
 ### `examples/replacement_knob.py` — the part you can't buy
 
-A replacement knob for a D or double-D shaft (stove, oven, washer, dryer, fan, amp) from
-five caliper readings, for the model nobody sells knobs for any more. Exports the knob
-already flipped for printing, a STEP of it as fitted, and a 5 mm **fit coupon** with the
-same bore. Print the coupon first and tune `FIT_CLEARANCE` before the full print. The
-file's docstring explains how to measure the shaft and has safety notes for cooker knobs.
+A replacement knob for a D or double-D shaft (stove, oven, washer, dryer, fan, amp)
+built from caliper readings, with a fit coupon to tune the fit before the full print.
+**Step-by-step instructions: [Make a replacement knob](#make-a-replacement-knob).**
 
 ```bash
 squashfs-root/usr/bin/freecadcmd examples/replacement_knob.py
@@ -252,7 +482,6 @@ every major feature of the library:
 
 ```bash
 # Headless — no display required, outputs files to examples/out/
-cd /opt/proj/partikus
 squashfs-root/usr/bin/freecadcmd examples/rpi4_enclosure.py
 
 # Live GUI — watch it build step-by-step in FreeCAD's 3-D view
@@ -1045,7 +1274,7 @@ All dimensions are **mm** unless the parameter name carries a suffix.
 ## Testing
 
 ```bash
-# Full test suite (834 tests, all tiers)
+# Full test suite (835 tests, all tiers)
 squashfs-root/usr/bin/freecadcmd tests/run_tests.py
 
 # Single module
@@ -1083,7 +1312,7 @@ squashfs-root/usr/bin/freecadcmd tests/run_integration_tests.py
 | SubD | `test_subd.py` | SubDMesh engine, all `subd_*` functions, conversions, analysis |
 | Visual | `test_visual_regression.py` | zebra/reflection PNG output vs committed baselines |
 
-**Total: 834 tests — 834 passing**
+**Total: 835 tests — 835 passing**
 
 ---
 
