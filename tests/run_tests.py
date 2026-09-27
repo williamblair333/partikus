@@ -38,6 +38,7 @@ _MODULES = [
     "tests.test_subd",
     "tests.test_visual_regression",
     "tests.test_pf1e_templates",
+    "tests.test_replacement_knob",
     "tests.test_gui_loader",
     "tests.test_auto_dialog",         # dialog parameter round-trip (needs Qt)
     "tests.test_attach_command",      # GUI Attach command's document logic

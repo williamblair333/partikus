@@ -148,6 +148,18 @@ through, exported to STEP and STL. Built step by step in the
 squashfs-root/usr/bin/freecadcmd examples/getting_started.py
 ```
 
+### `examples/replacement_knob.py` — the part you can't buy
+
+A replacement knob for a D or double-D shaft (stove, oven, washer, dryer, fan, amp) from
+five caliper readings, for the model nobody sells knobs for any more. Exports the knob
+already flipped for printing, a STEP of it as fitted, and a 5 mm **fit coupon** with the
+same bore. Print the coupon first and tune `FIT_CLEARANCE` before the full print. The
+file's docstring explains how to measure the shaft and has safety notes for cooker knobs.
+
+```bash
+squashfs-root/usr/bin/freecadcmd examples/replacement_knob.py
+```
+
 ### `examples/rpi4_enclosure.py` — full-API showcase
 
 A single runnable script that builds a parametric Raspberry Pi 4B enclosure and exercises
