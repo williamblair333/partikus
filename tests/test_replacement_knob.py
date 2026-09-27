@@ -210,3 +210,14 @@ def test_importing_the_example_does_not_build_and_export():
     # not rewrite examples/out/ on every test run.
     assert kn.__name__ == "replacement_knob_under_test"
     assert callable(kn.main)
+
+def test_script_runs_under_its_own_file_name():
+    # The README tells people to copy this file (examples/my_knob.py) before
+    # editing it. The guard must match whatever the file is called, not the
+    # literal "replacement_knob" — otherwise a copy silently does nothing.
+    assert kn.SCRIPT_NAME == "replacement_knob"
+    assert kn.__name__ != kn.SCRIPT_NAME
+    names = kn.output_names()
+    assert names == {"knob": "replacement_knob.stl",
+                     "coupon": "replacement_knob_fit_coupon.stl",
+                     "step": "replacement_knob.step"}

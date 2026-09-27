@@ -14,8 +14,8 @@ Measuring your shaft (calipers, not a ruler):
     SHAFT_FLATS   1 for a D shaft, 2 for a double-D
     SHAFT_ENGAGE  how far the old knob sat down onto the shaft
     POINTER_DEG   where the knob's pointer sits relative to the flat, measured
-                  counter-clockwise looking down on the knob. 0 = the pointer
-                  is on the same side as the flat, which is the usual layout.
+                  anticlockwise looking at the knob's face. 0 = the pointer is
+                  on the same side as the flat, which is the usual layout.
                   Check it against your old knob or the panel markings.
 
 The most common stove/range valve shaft is 1/4 in (6.35 mm) with a flat at
@@ -32,17 +32,24 @@ Safety — read this if the knob is for a cooker:
     * After fitting, turn the valve to its OFF detent and check that the
       pointer reads OFF. A pointer that lies is worse than no knob.
     * The knob does not make a gas valve safe — the valve's own push-to-turn
-      does. If the old knob had a spring clip or a metal insert, keep it.
+      does.
+    * The bore is plain plastic sized to the bare shaft. If the old knob had a
+      metal spring clip in its hole, leave it out (pull it off the shaft if it
+      stayed there); the coupon-tuned fit replaces it.
+
+Copy this file before editing it, one copy per knob, and keep the copy in
+examples/ so it can find partikus:
+    cp examples/replacement_knob.py examples/stove_knob.py
 
 Run headless:
-    squashfs-root/usr/bin/freecadcmd examples/replacement_knob.py
+    squashfs-root/usr/bin/freecadcmd examples/stove_knob.py
 
-Output files land in examples/out/:
-    replacement_knob.stl              print this — already upside down, so the
-                                      bore and the hollow underside open
-                                      upward and nothing needs support
-    replacement_knob_fit_coupon.stl   print this FIRST
-    replacement_knob.step             the knob as fitted, for CAD
+Output files land in examples/out/, named after the script:
+    stove_knob.stl              print this — already upside down, so the bore
+                                and the hollow underside open upward and
+                                nothing needs support
+    stove_knob_fit_coupon.stl   print this FIRST
+    stove_knob.step             the knob as fitted, for CAD
 """
 import math
 import os
@@ -72,7 +79,7 @@ KNOB_DIA      = 40.0
 KNOB_HEIGHT   = 24.0
 TOP_FILLET    = 3.0     # rounding on the top edge
 
-POINTER_DEG   = 0.0     # pointer angle from the flat, counter-clockwise
+POINTER_DEG   = 0.0     # pointer angle from the flat, anticlockwise
 POINTER_WIDTH = 1.6
 POINTER_DEPTH = 1.0
 
@@ -91,6 +98,10 @@ BOSS_DIA      = 12.0
 COUPON_HEIGHT = 5.0
 
 OUT_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "out")
+
+# Outputs are named after this file, so examples/stove_knob.py writes
+# stove_knob.stl and never overwrites another copy's files.
+SCRIPT_NAME = os.path.splitext(os.path.basename(os.path.abspath(__file__)))[0]
 
 _EPS = 0.5          # cutters overshoot the faces they open through by this
 _MIN_BOSS_WALL = 1.2
@@ -227,6 +238,13 @@ def build_fit_coupon(shaft_dia=SHAFT_DIA, shaft_flat=SHAFT_FLAT, flats=SHAFT_FLA
     return difference(ring, bore, notch)
 
 
+def output_names():
+    """File names main() writes into OUT_DIR, derived from SCRIPT_NAME."""
+    return {"knob": f"{SCRIPT_NAME}.stl",
+            "coupon": f"{SCRIPT_NAME}_fit_coupon.stl",
+            "step": f"{SCRIPT_NAME}.step"}
+
+
 def print_oriented(knob):
     """Flip the knob onto its top face so the bore and skirt open upward."""
     h = knob.shape.BoundBox.ZMax
@@ -264,16 +282,18 @@ def main():
         f"  plastic : {knob.shape.Volume / 1000:.1f} cm^3\n")
 
     os.makedirs(OUT_DIR, exist_ok=True)
-    to_stl(print_oriented(knob), os.path.join(OUT_DIR, "replacement_knob.stl"))
-    to_stl(coupon, os.path.join(OUT_DIR, "replacement_knob_fit_coupon.stl"))
-    to_step(knob, os.path.join(OUT_DIR, "replacement_knob.step"))
-    sys.stderr.write(f"wrote replacement_knob.stl, replacement_knob_fit_coupon.stl and "
-                     f"replacement_knob.step to {OUT_DIR}\n"
+    names = output_names()
+    to_stl(print_oriented(knob), os.path.join(OUT_DIR, names["knob"]))
+    to_stl(coupon, os.path.join(OUT_DIR, names["coupon"]))
+    to_step(knob, os.path.join(OUT_DIR, names["step"]))
+    sys.stderr.write(f"wrote {names['knob']}, {names['coupon']} and {names['step']} "
+                     f"to {OUT_DIR}\n"
                      f"print the fit coupon first.\n")
 
 
 # freecadcmd execs a script with __name__ set to its basename, not "__main__".
-# Matching on the basename lets tests/test_replacement_knob.py load this module
-# under another name without building and exporting.
-if __name__ == "replacement_knob":
+# Matching on this file's own basename (not the literal "replacement_knob") lets
+# a renamed copy run, while tests/test_replacement_knob.py can still load the
+# module under another name without building and exporting.
+if __name__ == SCRIPT_NAME:
     main()
