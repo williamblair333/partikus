@@ -1,13 +1,46 @@
 # Partikus — Developer Handoff
 
-**Last updated:** 2026-09-26  
-**Status:** Milestones 1–13 complete + visual regression suite + AI-prompt expansion + PF1e template example + getting-started tutorial + GUI Attach/weld command — 810 tests passing — **GUI workbench installs, loads, renders, and passes its full click-through test plan**  
-**Next milestone:** a new tier / BRep-stub workarounds (when FreeCAD exposes the APIs), or the recipe pattern (§6 item 6)
+**Last updated:** 2026-09-28  
+**Status:** Milestones 1–13 complete + visual regression suite + AI-prompt expansion + PF1e template example + getting-started tutorial + GUI Attach/weld command + replacement-knob example + README GUI and knob walkthroughs — 835 tests passing — **GUI workbench installs, loads, renders, and passes its full click-through test plan**  
+**Next milestone:** undecided. See "Open question" below before planning new work.
 
 > **Start here if you are picking up the GUI work:** §2a below. The workbench was
 > unreachable on every FreeCAD 1.x install until 2026-09-12. Three root causes are fixed,
 > the `Literal` annotation pass is done (§6 item 3), and the click-through test plan
-> passes end to end (§6 item 4). No GUI work is outstanding.
+> passes end to end (§6 item 4). Open GUI items are small labelling/doc fixes, listed
+> under "Follow-ups" below.
+
+### Latest session (2026-09-27 → 28)
+
+**Merged** (Gitea PRs; `main` at `b07791a`, GitHub mirror identical):
+
+| PR | What |
+|---|---|
+| #8 | `examples/replacement_knob.py`: D / double-D shaft knob from caliper readings, plus a fit coupon. The tests check fit by solid interference against a modelled shaft. |
+| #10 | **Bug:** `countersink_hole()` was built upside down (the `makeCone` radii were swapped). Volume tests couldn't see it. Fixed, with an `isInside` probe test. |
+| #9 | README *Using the GUI*: a Pi 4 wall-plate walkthrough and the Tier 4–6 reference. |
+| #11 | README step-by-step for both pieces, a numbered Quick Start, and *Make a replacement knob*. The knob script now runs under any copy's file name and names its outputs after it. |
+
+**Lessons worth keeping:**
+- **Volume and bounding box can't tell a part from its mirror image.** Probe orientation with `shape.isInside(point, tol, True)`. That's how #10 was caught, by a fact-check of the docs.
+- **`Shape.BoundBox` pads curved faces by millimetres** (3.3 mm on the knob). Use `optimalBoundingBox()` for size assertions. `_bb_anchors` in `tier09_boolean.py` uses the loose box, so a boolean result's CENTER/TOP/BOTTOM may be off in X/Y on curved parts. Z was exact on the knob; the X/Y effect is unmeasured.
+- **Docs are verified by a "cold read".** A fresh agent that is forbidden from opening code tries to make the part from the README alone and reports where it gets stuck. The first pass found 2 blockers and 11 confusing spots; the second found 0 blockers (Pi plate 9/10, knob 8/10). It also found real bugs: the knob's run guard ignored renamed copies, and the M4 hole had zero clearance.
+- **GUI facts** (FreeCAD 1.1.1, probed): after Attach, a cutter's Placement is (0, 0, −3). File → Export names the file itself (`Partikus-Cut001.stl`). The property editor's default tab is **View**, and Placement is on **Data**. `squashfs-root/AppRun freecad …` is valid, because AppRun dispatches its first argument to `usr/bin/`.
+- **Hooks:** the pre-mortem guard blocks any Bash command that mentions a surface file alongside a write, including `cp` of an example into `examples/`. Use the Edit tool. To test a renamed copy, `exec` the source with `__name__`/`__file__` set, rather than copying the file.
+
+**Open question: what is this project for?** At the user's request, market research into selling Partikus-made parts found no large, proven, underserved market:
+- The top Etsy sellers are organic toys and decor, which Partikus is weakest at.
+- Generic parametric hardware (boxes, screws, Gridfinity) is served free by MakerWorld's Parametric Model Maker. It accepts OpenSCAD or Fusion only, so Partikus can't publish there.
+- Funded text-to-CAD tools (AdamCAD, Zoo, Backflip) target the rest.
+
+The one opening is fit-guaranteed replacement parts, where measuring is the bottleneck. The demand there is anecdotal and unmeasured. The user called it "a dud" as a product. **The question they left open:** wind the project down cleanly, or keep it as a personal tool. Ask before starting new feature work.
+
+**Follow-ups (small, not started):**
+1. **Threaded parts look threaded in the GUI but are smooth.** The user hit this with *Threaded Rod*. Rename the tier 5 commands "… (smooth)" and start their tooltips with "Smooth: no thread is modelled". Real helical threads (`modelled_thread=True`) are a larger, optional feature.
+2. **README doesn't explain the menu-path notation.** "Partikus → Enhanced → Rounded Box" confused the user, as did the difference between the workbench dropdown and the Partikus menu that appears in the menu bar between Macro and Windows. Add one line near the top of *Using the GUI*.
+3. **Quick Start "Basic usage" snippet** doesn't say where to save the script or how to run it. Test how a script outside `examples/` finds `partikus` before documenting it.
+4. **§7 item 1 is stale.** It says `threaded_rod` has a reserved `cosmetic=False` parameter; the code has no such parameter, only `thread_form`.
+5. `examples/stove_knob.py` in the working tree is the user's own untracked copy, made while following the README. Don't commit or delete it.
 
 **Repo hosting:** Primary remote is self-hosted **Gitea** — `origin` = `http://10.0.0.100:3000/bill/partikus`, `remote.pushDefault=origin`. GitHub (`github` remote → `williamblair333/partikus`) is a read-only mirror, kept current by a Gitea push mirror (sync on commit, plus every 8h) — never push to it directly. Plain `git push` goes to Gitea. `main` is protected by a local push-guard hook: land work through a feature branch and a Gitea PR (REST API; the stored git credential authenticates it). The August 2026 rewind of GitHub `main` to `f2dc1d0` is healed — as of 2026-09-26 GitHub and Gitea `main` are identical.
 
@@ -693,4 +726,4 @@ If anything is failing, fix it before adding new code.
 
 ---
 
-*End of handoff. Milestones 1–13 complete + visual regression suite + AI-prompt expansion + PF1e template example + getting-started tutorial + GUI Attach/weld command. 810 tests passing. GUI workbench installs, loads and passes its click-through test plan (2026-09-26); `Literal` annotation pass done. Next: a new tier, or the recipe pattern.*
+*End of handoff. Milestones 1–13 complete + visual regression suite + AI-prompt expansion + PF1e template example + getting-started tutorial + GUI Attach/weld command + replacement-knob example + README GUI and knob walkthroughs. 835 tests passing (2026-09-28). Next: settle the open question at the top (wind down vs personal tool), then the small follow-ups listed there.*
